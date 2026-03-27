@@ -174,23 +174,23 @@ def handle(msg):
         add_user(chat_id)
         user = get_user(chat_id)
 
-    # =============================
-    # USER RATING (MUHIIM - TOP)
-    # =============================
+# =============================
+# USER RATING (MUHIIM - HOOS)
+# =============================
 
-    # 1. haddii user sugayo rating
-    if chat_id in manual_ratings and msg.content_type == "text":
+# 1. haddii user sugayo rating
+if chat_id in manual_ratings and msg.content_type == "text":
 
-        text_clean = msg.text.strip()
+    text_clean = msg.text.strip()
 
-        if not text_clean.isdigit():
-            bot.send_message(chat_id, "❌ Geli number sax ah")
-            return
+    if not text_clean.isdigit():
+        bot.send_message(chat_id, "❌ Geli number sax ah")
+        return
 
-        rating = int(text_clean)
-        price = get_price(rating)
+    rating = int(text_clean)
+    price = get_price(rating)
 
-        bot.send_message(chat_id,
+    bot.send_message(chat_id,
 f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
@@ -200,14 +200,15 @@ f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 {WHATSAPP_LINK}
 """, parse_mode="Markdown")
 
-        manual_ratings.pop(chat_id)
-        return
+    manual_ratings.pop(chat_id)
+    return
 
-    # 2. haddii sawir cusub la soo diro (user normal ah)
-    if msg.content_type == "photo" and chat_id not in admin_state:
-        manual_ratings[chat_id] = True
-        bot.reply_to(msg, "Qor rating:")
-        return
+
+# 2. haddii sawir cusub la soo diro
+if msg.content_type == "photo" and chat_id not in admin_state:
+    manual_ratings[chat_id] = True
+    bot.reply_to(msg, "Qor rating:")
+    return
 
     # =============================
     # ADMIN PANEL
