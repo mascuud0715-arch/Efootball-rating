@@ -60,6 +60,9 @@ def reset_today_market():
 def get_all_users():
     return [u['chat_id'] for u in users_col.find()]
 
+def get_total_users():
+    return users_col.count_documents({})
+
 # ==============================
 # START COMMAND
 # ==============================
@@ -89,6 +92,7 @@ def main_menu_buttons(chat_id, is_admin=False):
 def admin_panel_buttons(chat_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(
+        KeyboardButton("📊 Stats"),
         KeyboardButton("Gali Shax Cusub"),
         KeyboardButton("Delete Shaxda Maanta"),
         KeyboardButton("Broadcast Text"),
@@ -150,6 +154,11 @@ def handle_buttons(msg):
             bot.send_message(chat_id, "📸 Fadlan soo dir sawirka aad rabto inaad u dirto dhamaan users:")
             admin_state[chat_id] = 'broadcast_photo'
             return
+
+         elif text == "📊 Stats":
+            total = get_total_users()
+             bot.send_message(chat_id, f"📊 Total Users: {total}")
+             return
 
         elif text == "Broadcast Video":
             bot.send_message(chat_id, "🎥 Fadlan soo dir video-ga aad rabto inaad u dirto dhamaan users:")
