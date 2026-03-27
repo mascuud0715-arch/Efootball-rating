@@ -16,7 +16,6 @@ ADMIN_ID = int(os.getenv("ADMIN_ID"))
 # PRICE SYSTEM
 # ==============================
 def get_price(rating):
-    # still can use automatic price if needed
     if 3100 <= rating <= 3130: return random.randint(2, 4)
     elif 3130 < rating <= 3150: return random.randint(6, 8)
     elif 3150 < rating <= 3170: return random.randint(7, 10)
@@ -29,9 +28,9 @@ def get_price(rating):
 # ==============================
 # STORAGE
 # ==============================
-manual_ratings = {}
-today_market = {}  # {'photo_file_id': '', 'rating': int, 'price': int}
-admin_state = {}   # track admin actions
+manual_ratings = {}   # user manual rating input
+today_market = {}     # {'photo_file_id': '', 'rating': int, 'price': int}
+admin_state = {}      # track admin actions
 
 # ==============================
 # START COMMAND
@@ -39,6 +38,7 @@ admin_state = {}   # track admin actions
 @bot.message_handler(commands=['start'])
 def start(msg):
     bot.reply_to(msg, "👋 Soo dir sawirka shaxda eFootball si loo qiimeeyo 💰")
+    main_menu_buttons(msg.chat.id)
 
 # ==============================
 # MAIN MENU BUTTONS
@@ -65,13 +65,16 @@ def admin_panel_buttons(chat_id):
     bot.send_message(chat_id, "🛠️ Admin Panel:", reply_markup=markup)
 
 # ==============================
-# HANDLE BUTTONS
+# BUTTON HANDLER
 # ==============================
 @bot.message_handler(func=lambda m: True)
 def handle_buttons(msg):
     chat_id = msg.chat.id
     text = msg.text
 
+    # --------------------------
+    # MAIN MENU ACTIONS
+    # --------------------------
     if text == "📈 Shaxda Suuqa Maanta":
         if 'photo_file_id' in today_market:
             rating = today_market.get('rating', '?')
@@ -90,9 +93,9 @@ def handle_buttons(msg):
         admin_state[chat_id] = None
         return
 
-    # ==============================
+    # --------------------------
     # ADMIN PANEL ACTIONS
-    # ==============================
+    # --------------------------
     elif text == "Gali Shax Cusub" and msg.from_user.id == ADMIN_ID:
         bot.send_message(chat_id, "📸 Fadlan soo dir sawirka shaxda cusub:")
         admin_state[chat_id] = 'add_new'
@@ -116,9 +119,9 @@ def handle_buttons(msg):
         main_menu_buttons(chat_id)
         return
 
-    # ==============================
-    # MANUAL RATING INPUT (USERS)
-    # ==============================
+    # --------------------------
+    # USER MANUAL RATING INPUT
+    # --------------------------
     elif chat_id in manual_ratings:
         try:
             rating = int(text)
@@ -139,28 +142,32 @@ def handle_buttons(msg):
             bot.reply_to(msg, "❌ Fadlan qoro number sax ah oo 4-digit ah.")
 
 # ==============================
-# HANDLE ADMIN PHOTO
+# PHOTO HANDLER (ADMIN & USER HALIS)
 # ==============================
 @bot.message_handler(content_types=['photo'])
-def handle_admin_photo(message):
+def handle_photo(message):
     chat_id = message.chat.id
-    if chat_id in admin_state:
-        state = admin_state[chat_id]
-        if state in ['add_new', 'update']:
-            today_market['photo_file_id'] = message.photo[-1].file_id
-            bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25):")
-            admin_state[chat_id] = 'awaiting_rating_price'
-            return
+    state = admin_state.get(chat_id)
 
-    # USER PHOTO HANDLING
-    if chat_id not in admin_state:
-        bot.reply_to(chat_id, "📸 Sawirka waa la helay!\nFadlan qor **rating-ka** shaxda eFootball (tusaale: 3150):")
-        manual_ratings[chat_id] = True
+    # --------------------------
+    # ADMIN PHOTO
+    # --------------------------
+    if state in ['add_new', 'update']:
+        today_market['photo_file_id'] = message.photo[-1].file_id
+        bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25):")
+        admin_state[chat_id] = 'awaiting_rating_price'
+        return
+
+    # --------------------------
+    # USER PHOTO
+    # --------------------------
+    bot.reply_to(message, "📸 Sawirka waa la helay!\nFadlan qor **rating-ka** shaxda eFootball (tusaale: 3150):")
+    manual_ratings[chat_id] = True
 
 # ==============================
 # HANDLE ADMIN RATING + PRICE
 # ==============================
-@bot.message_handler(func=lambda m: m.chat.id in admin_state and admin_state[m.chat.id] == 'awaiting_rating_price')
+@bot.message_handler(func=lambda m: admin_state.get(m.chat.id) == 'awaiting_rating_price')
 def handle_admin_rating_price(msg):
     chat_id = msg.chat.id
     try:
@@ -173,20 +180,10 @@ def handle_admin_rating_price(msg):
         today_market['rating'] = rating
         today_market['price'] = price
         admin_state[chat_id] = None
-        bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\nRating: {rating}\nPrice: ${price}")
+        bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\n📊 Rating: {rating}\n💰 Qiimaha: ${price}")
         admin_panel_buttons(chat_id)
     except:
         bot.send_message(chat_id, "❌ Fadlan qor number sax ah oo qaab: Rating Price (tusaale: 3150 25)")
-
-# ==============================
-# HANDLE USER PHOTO FOR MANUAL RATINGS
-# ==============================
-@bot.message_handler(content_types=['photo'])
-def handle_manual_photo(message):
-    chat_id = message.chat.id
-    if chat_id not in admin_state:
-        bot.reply_to(message, "📸 Sawirka waa la helay!\nFadlan qor **rating-ka** shaxda eFootball (tusaale: 3150):")
-        manual_ratings[chat_id] = True
 
 # ==============================
 # RUN BOT
