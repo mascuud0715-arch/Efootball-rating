@@ -34,7 +34,7 @@ def get_price(rating):
     else: return None
 
 # ==============================
-# STORAGE HELPER FUNCTIONS
+# STORAGE / MONGO HELPERS
 # ==============================
 def add_user(chat_id):
     users_col.update_one({"chat_id": chat_id}, {"$set": {"chat_id": chat_id}}, upsert=True)
@@ -93,6 +93,8 @@ def admin_panel_buttons(chat_id):
         KeyboardButton("Gali Shax Cusub"),
         KeyboardButton("Update Shax Cusub"),
         KeyboardButton("Delete Shaxda Maanta"),
+        KeyboardButton("Broadcast"),
+        KeyboardButton("Stats"),
         KeyboardButton("Back")
     )
     bot.send_message(chat_id, "🛠️ Admin Panel:", reply_markup=markup)
@@ -107,7 +109,9 @@ def handle_buttons(msg):
     is_admin = (msg.from_user.id == ADMIN_ID)
     state = get_admin_state(chat_id)
 
+    # --------------------------
     # MAIN MENU
+    # --------------------------
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
         if 'photo_file_id' in today:
@@ -119,17 +123,23 @@ def handle_buttons(msg):
             bot.send_message(chat_id, "❌ Shaxda suuqa maanta wali lama dhigin. Fadlan sug.")
         return
 
+    # --------------------------
+    # ADMIN PANEL
+    # --------------------------
     if text == "🛠️ Admin Panel" and is_admin:
         admin_panel_buttons(chat_id)
         set_admin_state(chat_id, None)
         return
 
-    # ADMIN PANEL ACTIONS
+    # --------------------------
+    # ADMIN ACTIONS
+    # --------------------------
     if is_admin:
         if text == "Gali Shax Cusub":
             bot.send_message(chat_id, "📸 Fadlan soo dir sawirka shaxda cusub:")
             set_admin_state(chat_id, 'add_new')
             return
+
         elif text == "Update Shax Cusub":
             today = get_today_market()
             if 'photo_file_id' not in today:
@@ -138,38 +148,57 @@ def handle_buttons(msg):
             bot.send_message(chat_id, "📸 Fadlan soo dir sawirka cusub ee shaxda maanta:")
             set_admin_state(chat_id, 'update')
             return
+
         elif text == "Delete Shaxda Maanta":
             reset_today_market()
             bot.send_message(chat_id, "✅ Shaxda suuqa maanta waa la tirtiray.")
             admin_panel_buttons(chat_id)
             return
+
+        elif text == "Broadcast":
+            bot.send_message(chat_id, "📢 Fadlan soo dir **text / photo / video** broadcast-ka:")
+            set_admin_state(chat_id, 'broadcast')
+            return
+
+        elif text == "Stats":
+            total = users_col.count_documents({})
+            bot.send_message(chat_id, f"📊 Total Users: {total}")
+            return
+
         elif text == "Back":
             main_menu_buttons(chat_id, True)
             return
 
-    # USER MANUAL RATING INPUT
-    manual_ratings = get_admin_temp(chat_id, 'manual')
-    if manual_ratings:
-        try:
-            rating = int(text)
-            if rating < 3000 or rating > 3500:
-                bot.reply_to(msg, "❌ Rating-ka waa inuu noqdaa 3000–3500. Dib u qor.")
-                return
-            price = get_price(rating)
-            final_text = f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
-
-📊 Rating: {rating}
-💰 Qiimaha: ${price}
-
-📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇
-{WHATSAPP_LINK}"""
-            bot.send_message(chat_id, final_text)
-            admin_state_col.update_one({"chat_id": chat_id}, {"$unset": {"manual": ""}})
-        except:
-            bot.reply_to(msg, "❌ Fadlan qoro number sax ah oo 4-digit ah.")
+    # --------------------------
+    # BROADCAST LOGIC
+    # --------------------------
+    if state == 'broadcast':
+        # Text only
+        if msg.content_type == 'text':
+            text_to_send = msg.text
+            for u in users_col.find({}):
+                try: bot.send_message(u['chat_id'], text_to_send)
+                except: pass
+            bot.send_message(chat_id, "✅ Broadcast text waa la diray dhammaan users.")
+        # Photo
+        elif msg.content_type == 'photo':
+            file_id = msg.photo[-1].file_id
+            for u in users_col.find({}):
+                try: bot.send_photo(u['chat_id'], file_id)
+                except: pass
+            bot.send_message(chat_id, "✅ Broadcast photo waa la diray dhammaan users.")
+        # Video
+        elif msg.content_type == 'video':
+            file_id = msg.video.file_id
+            for u in users_col.find({}):
+                try: bot.send_video(u['chat_id'], file_id)
+                except: pass
+            bot.send_message(chat_id, "✅ Broadcast video waa la diray dhammaan users.")
+        set_admin_state(chat_id, None)
+        return
 
 # ==============================
-# PHOTO HANDLER
+# PHOTO HANDLER (ADMIN ONLY)
 # ==============================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
@@ -183,9 +212,6 @@ def handle_photo(message):
         set_admin_state(chat_id, 'awaiting_rating_price')
         bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25)")
         return
-
-    bot.reply_to(message, "📸 Sawirka waa la helay!\nFadlan qor **rating-ka** shaxda eFootball (tusaale: 3150)")
-    set_admin_temp(chat_id, 'manual', True)
 
 # ==============================
 # HANDLE ADMIN RATING + PRICE
