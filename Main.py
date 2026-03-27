@@ -335,14 +335,14 @@ def handle(msg):
     # =============================
     if chat_id in manual_ratings and msg.content_type == "text":
 
-    if not msg.text.isdigit():
-        bot.send_message(chat_id, "❌ Geli number sax ah")
-        return
+        if not msg.text.isdigit():
+            bot.send_message(chat_id, "❌ Geli number sax ah")
+            return
 
-    rating = int(msg.text)
-    price = get_price(rating)
+        rating = int(msg.text)
+        price = get_price(rating)
 
-    bot.send_message(chat_id,
+        bot.send_message(chat_id,
 f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
@@ -352,15 +352,15 @@ f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 {WHATSAPP_LINK}
 """, parse_mode="Markdown")
 
-    manual_ratings.pop(chat_id)
-    return
+        manual_ratings.pop(chat_id)
+        return
 
 
-# 2. haddii sawir cusub la soo diro (ONLY haddii admin state jirin)
-if msg.content_type == "photo" and chat_id not in admin_state:
-    manual_ratings[chat_id] = True
-    bot.reply_to(msg, "Qor rating:")
-    return
+    # haddii sawir cusub la soo diro
+    if msg.content_type == "photo" and chat_id not in admin_state:
+        manual_ratings[chat_id] = True
+        bot.reply_to(msg, "Qor rating:")
+        return
 
 # ==============================
 # RUN
