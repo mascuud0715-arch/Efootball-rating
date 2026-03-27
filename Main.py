@@ -1,5 +1,5 @@
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 import random
 import os
 
@@ -10,7 +10,6 @@ TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
-
 ADMIN_ID = int(os.getenv("ADMIN_ID"))  # Telegram ID admin-ka
 
 # ==============================
@@ -27,67 +26,129 @@ def get_price(rating):
     else: return None
 
 # ==============================
-# STORE TODAY'S MARKET
+# TODAY MARKET STORAGE
 # ==============================
 today_market = {}  # {'photo_file_id': '', 'rating': int, 'price': int}
+
+# ==============================
+# REPLY KEYBOARD
+# ==============================
+def main_keyboard(user_id):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("Shaxda Suuqa Maanta"))
+    if user_id == ADMIN_ID:
+        markup.add(KeyboardButton("Admin Panel"))
+    return markup
 
 # ==============================
 # START COMMAND
 # ==============================
 @bot.message_handler(commands=['start'])
 def start(msg):
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("📈 Shaxda Suuqa Maanta", callback_data="view_market"))
-    bot.send_message(msg.chat.id, "👋 Soo dhawoow! Riix button-ka hoose si aad u aragto shaxda suuqa maanta.", reply_markup=markup)
+    bot.send_message(
+        msg.chat.id,
+        "👋 Soo dhawoow! Riix button-ka hoose:",
+        reply_markup=main_keyboard(msg.from_user.id)
+    )
 
 # ==============================
-# ADMIN: SET MARKET
+# ADMIN STATE
 # ==============================
-@bot.message_handler(commands=['set_market'])
-def set_market(msg):
-    if msg.from_user.id != ADMIN_ID:
-        bot.reply_to(msg, "❌ Ma aadan ahayn admin.")
+admin_state = {}  # {'awaiting_photo': bool, 'awaiting_rating': bool}
+
+# ==============================
+# HANDLE TEXT BUTTONS
+# ==============================
+@bot.message_handler(func=lambda m: True)
+def handle_buttons(msg):
+    text = msg.text
+
+    # ==============================
+    # User wants to view today's market
+    # ==============================
+    if text == "Shaxda Suuqa Maanta":
+        if 'photo_file_id' in today_market:
+            rating = today_market.get('rating', '?')
+            price = today_market.get('price', '?')
+            caption = f"🔥 Shaxda Suuqa Maanta 🔥\n\n📊 Rating: {rating}\n💰 Qiimaha: ${price}\n\n📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇\n{WHATSAPP_LINK}"
+            bot.send_photo(msg.chat.id, today_market['photo_file_id'], caption=caption)
+        else:
+            bot.send_message(msg.chat.id, "❌ Shaxda suuqa maanta wali lama dhigin. Fadlan sug.")
         return
-    bot.reply_to(msg, "📸 Fadlan soo dir sawirka shaxda suuqa maanta oo wata rating:")
 
-    # Set admin waiting state
-    today_market['waiting'] = True
+    # ==============================
+    # Admin Panel
+    # ==============================
+    if text == "Admin Panel":
+        if msg.from_user.id != ADMIN_ID:
+            bot.send_message(msg.chat.id, "❌ Ma aadan ahayn admin.")
+            return
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(
+            KeyboardButton("Gali Shax Cusub"),
+            KeyboardButton("Update Shaxda Maanta"),
+            KeyboardButton("Delete Shaxda Maanta"),
+        )
+        bot.send_message(msg.chat.id, "🛠 Admin Panel - dooro ficilka:", reply_markup=markup)
+        return
 
+    # ==============================
+    # Admin Gali Shax Cusub
+    # ==============================
+    if text == "Gali Shax Cusub" and msg.from_user.id == ADMIN_ID:
+        bot.send_message(msg.chat.id, "📸 Fadlan soo dir sawirka shaxda suuqa maanta.")
+        admin_state[msg.chat.id] = {'awaiting_photo': True}
+        return
+
+    # ==============================
+    # Admin Update Shax
+    # ==============================
+    if text == "Update Shaxda Maanta" and msg.from_user.id == ADMIN_ID:
+        if 'photo_file_id' not in today_market:
+            bot.send_message(msg.chat.id, "❌ Shaxda maanta wali lama dhigin. Isticmaal 'Gali Shax Cusub'.")
+            return
+        bot.send_message(msg.chat.id, "📸 Fadlan soo dir sawirka cusub ee shaxda suuqa maanta.")
+        admin_state[msg.chat.id] = {'awaiting_photo': True}
+        return
+
+    # ==============================
+    # Admin Delete Shax
+    # ==============================
+    if text == "Delete Shaxda Maanta" and msg.from_user.id == ADMIN_ID:
+        today_market.clear()
+        bot.send_message(msg.chat.id, "🗑 Shaxda suuqa maanta waa la tirtiray.")
+        return
+
+    bot.send_message(msg.chat.id, "❌ Fadlan dooro button sax ah.", reply_markup=main_keyboard(msg.from_user.id))
+
+# ==============================
+# HANDLE ADMIN PHOTO
+# ==============================
 @bot.message_handler(content_types=['photo'])
 def handle_admin_photo(message):
-    if 'waiting' in today_market and today_market['waiting'] and message.from_user.id == ADMIN_ID:
+    chat_id = message.chat.id
+    if chat_id in admin_state and admin_state[chat_id].get('awaiting_photo'):
         today_market['photo_file_id'] = message.photo[-1].file_id
-        bot.reply_to(message, "Fadlan qor rating-ka shaxda:")
-        today_market['waiting'] = 'awaiting_rating'
+        bot.send_message(chat_id, "Fadlan qor **rating-ka** shaxda:")
+        admin_state[chat_id]['awaiting_photo'] = False
+        admin_state[chat_id]['awaiting_rating'] = True
         return
 
-    # User normal photo handling can go here if needed
-    bot.reply_to(message, "📸 Sawirka waa la helay, laakiin tani waa user-ka caadiga ah.")
-
-@bot.message_handler(func=lambda m: 'waiting' in today_market and today_market['waiting'] == 'awaiting_rating' and m.from_user.id == ADMIN_ID)
+# ==============================
+# HANDLE ADMIN RATING
+# ==============================
+@bot.message_handler(func=lambda m: m.chat.id in admin_state and admin_state[m.chat.id].get('awaiting_rating'))
 def handle_admin_rating(msg):
+    chat_id = msg.chat.id
     try:
         rating = int(msg.text)
         price = get_price(rating)
         today_market['rating'] = rating
         today_market['price'] = price
-        today_market.pop('waiting')  # clear state
-        bot.reply_to(msg, f"✅ Shaxda suuqa maanta waa la keydiyay!\nRating: {rating}\nPrice: ${price}")
+        admin_state[chat_id]['awaiting_rating'] = False
+        bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\nRating: {rating}\nPrice: ${price}", reply_markup=main_keyboard(chat_id))
     except:
-        bot.reply_to(msg, "❌ Fadlan qor number sax ah.")
-
-# ==============================
-# USER: VIEW MARKET BUTTON
-# ==============================
-@bot.callback_query_handler(func=lambda call: call.data == "view_market")
-def view_market(call):
-    if 'photo_file_id' in today_market:
-        rating = today_market.get('rating', '?')
-        price = today_market.get('price', '?')
-        caption = f"🔥 Shaxda Suuqa Maanta 🔥\n\n📊 Rating: {rating}\n💰 Qiimaha: ${price}\n\n📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇\n{WHATSAPP_LINK}"
-        bot.send_photo(call.message.chat.id, today_market['photo_file_id'], caption=caption)
-    else:
-        bot.send_message(call.message.chat.id, "❌ Shaxda suuqa maanta wali lama dhigin. Fadlan sug.")
+        bot.send_message(chat_id, "❌ Fadlan qor number sax ah oo 4-digit ah.")
 
 # ==============================
 # RUN BOT
