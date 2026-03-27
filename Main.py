@@ -37,18 +37,20 @@ admin_state = {}      # track admin actions
 # ==============================
 @bot.message_handler(commands=['start'])
 def start(msg):
+    is_admin = (msg.from_user.id == ADMIN_ID)
     bot.reply_to(msg, "👋 Soo dir sawirka shaxda eFootball si loo qiimeeyo 💰")
-    main_menu_buttons(msg.chat.id)
+    main_menu_buttons(msg.chat.id, is_admin)
 
 # ==============================
 # MAIN MENU BUTTONS
 # ==============================
-def main_menu_buttons(chat_id):
+def main_menu_buttons(chat_id, is_admin=False):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(
-        KeyboardButton("📈 Shaxda Suuqa Maanta"),
-        KeyboardButton("🛠️ Admin Panel")
-    )
+    markup.add(KeyboardButton("📈 Shaxda Suuqa Maanta"))
+    if is_admin:
+        markup.add(KeyboardButton("🛠️ Admin Panel"))
+    bot.send_message(chat_id, "Riix button-ka hoose:", reply_markup=markup)
+
 
 # ==============================
 # ADMIN PANEL BUTTONS
