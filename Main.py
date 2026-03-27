@@ -90,22 +90,20 @@ def handle_photo(message):
         with open("team.jpg", "wb") as f: f.write(downloaded_file)
 
         # Preprocess image for better OCR
-        img = Image.open("team.jpg").convert('L')  # grayscale
-        img = img.resize((img.width*3, img.height*3))  # zoom
+        img = Image.open("team.jpg").convert('L')
+        img = img.resize((img.width*3, img.height*3))
         img = img.filter(ImageFilter.SHARPEN)
         img = ImageOps.autocontrast(img)
         img = img.point(lambda x: 0 if x < 140 else 255)
 
-        # OCR config optimized for single line digits
+        # OCR config
         config = r'--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789'
         raw_text = pytesseract.image_to_string(img, config=config)
-
-        # Fix common OCR mistakes
         raw_text = raw_text.replace("O", "0").replace("I", "1").replace("l", "1")
         raw_text = re.sub(r'[^0-9]', '', raw_text)
-        print("OCR RAW TEXT:", raw_text)  # debug
+        print("OCR RAW TEXT:", raw_text)
 
-        # If no digits detected, fallback manual
+        # Fallback manual if no digits
         if not raw_text:
             bot.edit_message_text(
                 "❌ OCR-ku ma akhriyin wax digits ah.\n\nFadlan qor rating-ka 3000–3500 si manual ah:",
