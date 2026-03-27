@@ -175,6 +175,41 @@ def handle(msg):
         user = get_user(chat_id)
 
     # =============================
+    # USER RATING (MUHIIM - TOP)
+    # =============================
+
+    # 1. haddii user sugayo rating
+    if chat_id in manual_ratings and msg.content_type == "text":
+
+        text_clean = msg.text.strip()
+
+        if not text_clean.isdigit():
+            bot.send_message(chat_id, "❌ Geli number sax ah")
+            return
+
+        rating = int(text_clean)
+        price = get_price(rating)
+
+        bot.send_message(chat_id,
+f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
+
+📊 Rating: {rating}
+💰 Qiimaha: ${price}
+
+📢 Ka iibso shaxo 👇
+{WHATSAPP_LINK}
+""", parse_mode="Markdown")
+
+        manual_ratings.pop(chat_id)
+        return
+
+    # 2. haddii sawir cusub la soo diro (user normal ah)
+    if msg.content_type == "photo" and chat_id not in admin_state:
+        manual_ratings[chat_id] = True
+        bot.reply_to(msg, "Qor rating:")
+        return
+
+    # =============================
     # ADMIN PANEL
     # =============================
     if text == "🛠️ Admin Panel" and is_admin:
@@ -332,41 +367,6 @@ def handle(msg):
                 caption=f"📊 Rating: {today['rating']}\n💰 Price: ${today['price']}")
         else:
             bot.send_message(chat_id, "❌ Wali lama dhigin")
-        return
-
-    # =============================
-    # USER RATING (MUHIIM ORDER)
-    # =============================
-
-    # 1. haddii user sugayo rating
-    if chat_id in manual_ratings and msg.content_type == "text":
-
-        text_clean = msg.text.strip()
-
-        if not text_clean.isdigit():
-            bot.send_message(chat_id, "❌ Geli number sax ah")
-            return
-
-        rating = int(text_clean)
-        price = get_price(rating)
-
-        bot.send_message(chat_id,
-f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
-
-📊 Rating: {rating}
-💰 Qiimaha: ${price}
-
-📢 Ka iibso shaxo 👇
-{WHATSAPP_LINK}
-""", parse_mode="Markdown")
-
-        manual_ratings.pop(chat_id)
-        return
-
-    # 2. haddii sawir cusub la soo diro
-    if msg.content_type == "photo":
-        manual_ratings[chat_id] = True
-        bot.reply_to(msg, "Qor rating:")
         return
 
 # ==============================
