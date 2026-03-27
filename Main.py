@@ -49,7 +49,10 @@ def add_user(chat_id, username=None):
     user = users_col.find_one({"chat_id": chat_id})
 
     if not user:
-        ref_id = random.randint(10000, 99999)
+        while True:
+            ref_id = random.randint(10000, 99999)
+            if not users_col.find_one({"ref_id": ref_id}):
+                break
 
         users_col.insert_one({
             "chat_id": chat_id,
