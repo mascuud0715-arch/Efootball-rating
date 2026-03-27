@@ -76,19 +76,10 @@ def handle_buttons(msg):
     # MAIN MENU ACTIONS
     # --------------------------
     if text == "📈 Shaxda Suuqa Maanta":
-        # Hubi in sawir, rating iyo price dhammaantood la keydiyay
-        if ('photo_file_id' in today_market and 
-            'rating' in today_market and 
-            'price' in today_market):
-            rating = today_market['rating']
-            price = today_market['price']
-            caption = f"""🔥 Shaxda Suuqa Maanta 🔥
-
-📊 Rating: {rating}
-💰 Qiimaha: ${price}
-
-📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇
-{WHATSAPP_LINK}"""
+        if 'photo_file_id' in today_market:
+            rating = today_market.get('rating', '?')
+            price = today_market.get('price', '?')
+            caption = f"🔥 Shaxda Suuqa Maanta 🔥\n\n📊 Rating: {rating}\n💰 Qiimaha: ${price}\n\n📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇\n{WHATSAPP_LINK}"
             bot.send_photo(chat_id, today_market['photo_file_id'], caption=caption)
         else:
             bot.send_message(chat_id, "❌ Shaxda suuqa maanta wali lama dhigin. Fadlan sug.")
@@ -151,7 +142,7 @@ def handle_buttons(msg):
             bot.reply_to(msg, "❌ Fadlan qoro number sax ah oo 4-digit ah.")
 
 # ==============================
-# PHOTO HANDLER (ADMIN & USER)
+# PHOTO HANDLER (ADMIN & USER HALIS)
 # ==============================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
@@ -186,7 +177,6 @@ def handle_admin_rating_price(msg):
             return
         rating = int(parts[0])
         price = float(parts[1])
-        # Keydi sawirka + rating + price dhammaantood
         today_market['rating'] = rating
         today_market['price'] = price
         admin_state[chat_id] = None
