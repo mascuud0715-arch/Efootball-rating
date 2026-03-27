@@ -82,7 +82,6 @@ def main_menu_buttons(chat_id, is_admin=False):
     markup.add(KeyboardButton("📈 Shaxda Suuqa Maanta"))
     if is_admin:
         markup.add(KeyboardButton("🛠️ Admin Panel"))
-    bot.send_message(chat_id, "Riix button-ka hoose:", reply_markup=markup)
 
 # ==============================
 # ADMIN PANEL BUTTONS
