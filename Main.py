@@ -174,23 +174,21 @@ def handle(msg):
         add_user(chat_id)
         user = get_user(chat_id)
 
-# =============================
-# USER RATING (MUHIIM - HOOS)
-# =============================
+    # =============================
+    # USER RATING
+    # =============================
+    if chat_id in manual_ratings and msg.content_type == "text":
 
-# 1. haddii user sugayo rating
-if chat_id in manual_ratings and msg.content_type == "text":
+        text_clean = msg.text.strip()
 
-    text_clean = msg.text.strip()
+        if not text_clean.isdigit():
+            bot.send_message(chat_id, "❌ Geli number sax ah")
+            return
 
-    if not text_clean.isdigit():
-        bot.send_message(chat_id, "❌ Geli number sax ah")
-        return
+        rating = int(text_clean)
+        price = get_price(rating)
 
-    rating = int(text_clean)
-    price = get_price(rating)
-
-    bot.send_message(chat_id,
+        bot.send_message(chat_id,
 f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
@@ -200,15 +198,13 @@ f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 {WHATSAPP_LINK}
 """, parse_mode="Markdown")
 
-    manual_ratings.pop(chat_id)
-    return
+        manual_ratings.pop(chat_id)
+        return
 
-
-# 2. haddii sawir cusub la soo diro
-if msg.content_type == "photo" and chat_id not in admin_state:
-    manual_ratings[chat_id] = True
-    bot.reply_to(msg, "Qor rating:")
-    return
+    if msg.content_type == "photo" and chat_id not in admin_state:
+        manual_ratings[chat_id] = True
+        bot.reply_to(msg, "Qor rating:")
+        return
 
     # =============================
     # ADMIN PANEL
@@ -218,7 +214,6 @@ if msg.content_type == "photo" and chat_id not in admin_state:
         return
 
     if is_admin:
-
         if text == "📊 Stats":
             bot.send_message(chat_id,
                 f"👥 Total: {get_total_users()}\n🆕 Today: {get_today_users()}")
@@ -267,10 +262,8 @@ if msg.content_type == "photo" and chat_id not in admin_state:
     # =============================
     # STATES
     # =============================
-
     state = admin_state.get(chat_id)
 
-    # CHECKER
     if state == "check":
         try:
             ref = int(msg.text)
@@ -285,7 +278,6 @@ if msg.content_type == "photo" and chat_id not in admin_state:
         admin_state.pop(chat_id)
         return
 
-    # FREE ADD
     if state == "free_photo" and msg.content_type == "photo":
         admin_state["photo"] = msg.photo[-1].file_id
         admin_state[chat_id] = "free_rating"
@@ -293,15 +285,11 @@ if msg.content_type == "photo" and chat_id not in admin_state:
         return
 
     if state == "free_rating":
-        try:
-            set_free(admin_state["photo"], int(msg.text))
-            bot.send_message(chat_id, "✅ Free shax waa la dhigay")
-        except:
-            bot.send_message(chat_id, "❌ Error")
+        set_free(admin_state["photo"], int(msg.text))
+        bot.send_message(chat_id, "✅ Free shax waa la dhigay")
         admin_state.pop(chat_id)
         return
 
-    # MARKET ADD
     if state == "market_photo" and msg.content_type == "photo":
         admin_state["m_photo"] = msg.photo[-1].file_id
         admin_state[chat_id] = "market_rating"
@@ -324,7 +312,6 @@ if msg.content_type == "photo" and chat_id not in admin_state:
         admin_state.pop(chat_id)
         return
 
-    # BROADCAST
     if state in ["text","photo","video"]:
         for u in get_all_users():
             try:
@@ -343,7 +330,6 @@ if msg.content_type == "photo" and chat_id not in admin_state:
     # =============================
     # USER FEATURES
     # =============================
-
     if text == "🎁 SHAXAHA FREE":
         data = get_free()
         if not data:
