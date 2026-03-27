@@ -21,7 +21,7 @@ db = client['efb_bot']
 
 users_col = db['users']
 market_col = db['market']
-free_col = db['free']   # NEW
+free_col = db['free']
 
 manual_ratings = {}
 admin_state = {}
@@ -110,6 +110,19 @@ def start(msg):
 
     add_user(chat_id, username)
 
+    user = get_user(chat_id)
+
+    # FIX: haddii user ref maqan yahay
+    if not user or "ref" not in user:
+        ref = random.randint(10000, 99999)
+        users_col.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"ref": ref, "invited": 0}},
+            upsert=True
+        )
+        user = get_user(chat_id)
+
+    # referral system
     if len(args) > 1:
         try:
             ref = int(args[1])
@@ -170,14 +183,22 @@ def handle(msg):
 
     user = get_user(chat_id)
 
+    # FIX: ensure user exists
+    if not user:
+        add_user(chat_id, msg.from_user.username)
+        user = get_user(chat_id)
+
+    # =============================
     # FREE SHAX USER
+    # =============================
     if text == "🎁 SHAXAHA FREE":
         data = get_free()
+
         if not data:
             bot.send_message(chat_id, "❌ Free shax ma jiro")
             return
 
-        ref = user["ref"]
+        ref = user.get("ref", random.randint(10000, 99999))
         invited = user.get("invited", 0)
 
         bot.send_photo(chat_id, data["photo"],
@@ -188,16 +209,22 @@ def handle(msg):
 🔗 Link:
 {BOT_LINK}{ref}
 
-👥 {invited}/20""")
+👥 {invited}/20
+
+👋 Keen 20 qof si aad u hesho shaxdan""")
         return
 
+    # =============================
     # CHECKER
+    # =============================
     if text == "🔍 Checker" and is_admin:
         bot.send_message(chat_id, "Gali ref number:")
         admin_state[chat_id] = "check"
         return
 
+    # =============================
     # ADD FREE
+    # =============================
     if text == "🎁 Add Free Shax" and is_admin:
         bot.send_message(chat_id, "Dir sawir:")
         admin_state[chat_id] = "free_photo"
@@ -208,7 +235,9 @@ def handle(msg):
         bot.send_message(chat_id, "✅ Waa la tirtiray")
         return
 
+    # =============================
     # STATES
+    # =============================
     state = admin_state.get(chat_id)
 
     if state == "free_photo" and msg.content_type == "photo":
@@ -218,23 +247,32 @@ def handle(msg):
         return
 
     if state == "free_rating":
-        set_free(admin_state["photo"], int(msg.text))
-        bot.send_message(chat_id, "✅ Free shax waa la dhigay")
+        try:
+            rating = int(msg.text)
+            set_free(admin_state["photo"], rating)
+            bot.send_message(chat_id, "✅ Free shax waa la dhigay")
+        except:
+            bot.send_message(chat_id, "❌ Error")
         admin_state.pop(chat_id)
         return
 
     if state == "check":
-        ref = int(msg.text)
-        u = users_col.find_one({"ref": ref})
-        if u:
-            bot.send_message(chat_id,
-                f"👤 @{u.get('username')}\n👥 {u.get('invited',0)}")
-        else:
-            bot.send_message(chat_id, "❌ lama helin")
+        try:
+            ref = int(msg.text)
+            u = users_col.find_one({"ref": ref})
+            if u:
+                bot.send_message(chat_id,
+                    f"👤 @{u.get('username')}\n👥 {u.get('invited',0)}")
+            else:
+                bot.send_message(chat_id, "❌ lama helin")
+        except:
+            bot.send_message(chat_id, "❌ Error")
         admin_state.pop(chat_id)
         return
 
-    # ORIGINAL CODE (UNCHANGED)
+    # =============================
+    # MARKET
+    # =============================
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
         if 'photo_file_id' in today:
@@ -251,7 +289,9 @@ def handle(msg):
         admin_panel(chat_id)
         return
 
+    # =============================
     # USER FLOW
+    # =============================
     if msg.content_type == 'photo':
         bot.reply_to(msg, "Qor rating:")
         manual_ratings[chat_id] = True
