@@ -1,3 +1,5 @@
 pyTelegramBotAPI
 pillow
 pytesseract
+pymongo
+dnspython
