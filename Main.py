@@ -9,9 +9,10 @@ import time
 # ==============================
 # CONFIG
 # ==============================
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")  # Telegram bot token
 bot = telebot.TeleBot(TOKEN)
 
+# Path to tesseract executable (update if needed)
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
@@ -48,7 +49,7 @@ def animate_checking(chat_id, message_id):
         time.sleep(0.5)
 
 # ==============================
-# HANDLE MANUAL RATING INPUT
+# MANUAL RATING FALLBACK
 # ==============================
 manual_ratings = {}
 
@@ -57,7 +58,7 @@ def handle_manual_rating(msg):
     try:
         rating = int(msg.text)
         if rating < 3000 or rating > 3500:
-            bot.reply_to(msg, "❌ Rating-ka waa inuu noqdaa 3000–3500. Fadlan dib u qor.")
+            bot.reply_to(msg, "❌ Rating-ka waa inuu noqdaa 3000–3500. Dib u qor.")
             return
         price = get_price(rating)
         final_text = f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
@@ -81,6 +82,7 @@ def handle_photo(message):
         msg = bot.reply_to(message, "⏳ Checking...")
         animate_checking(message.chat.id, msg.message_id)
 
+        # Download image
         file_info = bot.get_file(message.photo[-1].file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         with open("team.jpg", "wb") as f: f.write(downloaded_file)
@@ -101,6 +103,7 @@ def handle_photo(message):
         raw_text = re.sub(r'[^0-9]', '', raw_text)
         print("OCR RAW TEXT:", raw_text)
 
+        # Find 4-digit rating
         rating = None
         for i in range(len(raw_text)-3):
             num = raw_text[i:i+4]
