@@ -180,33 +180,45 @@ def handle_rating_price(msg):
         return
 
     if state == 'awaiting_rating':
-        try:
-            rating = int(msg.text)
-            set_admin_temp(chat_id, 'rating', rating)
-            set_admin_state(chat_id, 'awaiting_price')
-            bot.send_message(chat_id, "💰 Fadlan qor **Price** shaxda (tusaale: 30):")
-        except:
+        # Hubi in text uu yahay number
+        if not msg.text.isdigit():
             bot.send_message(chat_id, "❌ Fadlan qor number sax ah oo rating-ka ah.")
+            return
+        rating = int(msg.text)
+        if rating < 3000 or rating > 3500:
+            bot.send_message(chat_id, "❌ Rating waa inuu noqdaa 3000–3500. Dib u qor.")
+            return
+        set_admin_temp(chat_id, 'rating', rating)
+        set_admin_state(chat_id, 'awaiting_price')
+        bot.send_message(chat_id, "💰 Fadlan qor **Price** shaxda (tusaale: 30):")
+
     elif state == 'awaiting_price':
         try:
             price = float(msg.text)
             photo_id = get_admin_temp(chat_id, 'photo_file_id')
             rating = get_admin_temp(chat_id, 'rating')
+
             if not photo_id or not rating:
-                bot.send_message(chat_id, "❌ Wax sawir ama rating lama hayo. Fadlan dib u soo dir.")
+                bot.send_message(chat_id, "❌ Wax sawir ama rating lama hayo. Fadlan dib u soo dir sawirka.")
                 set_admin_state(chat_id, 'awaiting_photo')
                 return
+
+            # Save suuqa maanta
             set_today_market({
                 "today": True,
                 "photo_file_id": photo_id,
                 "rating": rating,
                 "price": price
             })
+
             bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\n📊 Rating: {rating}\n💰 Qiimaha: ${price}")
             admin_panel_buttons(chat_id)
+
+            # Clear state
             set_admin_state(chat_id, None)
             set_admin_temp(chat_id, 'photo_file_id', None)
             set_admin_temp(chat_id, 'rating', None)
+
         except:
             bot.send_message(chat_id, "❌ Fadlan qor number sax ah oo price ah.")
 
