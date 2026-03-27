@@ -49,7 +49,6 @@ def main_menu_buttons(chat_id):
         KeyboardButton("📈 Shaxda Suuqa Maanta"),
         KeyboardButton("🛠️ Admin Panel")
     )
-    bot.send_message(chat_id, "Riix button-ka hoose:", reply_markup=markup)
 
 # ==============================
 # ADMIN PANEL BUTTONS
