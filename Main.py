@@ -38,7 +38,7 @@ def get_price(rating):
         return None
 
 # ==============================
-# START
+# START COMMAND
 # ==============================
 @bot.message_handler(commands=['start'])
 def start(msg):
@@ -49,11 +49,11 @@ def start(msg):
 # ==============================
 def animate_checking(chat_id, message_id):
     frames = ["⏳ Checking.", "⏳ Checking..", "⏳ Checking...", "⏳ Checking...."]
-    for i in range(6):  # tirada animation-ka
+    for i in range(6):
         text = frames[i % len(frames)]
         try:
             bot.edit_message_text(text, chat_id, message_id)
-        except:
+        except Exception:
             pass
         time.sleep(0.5)
 
@@ -63,13 +63,12 @@ def animate_checking(chat_id, message_id):
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     try:
-        # Send initial message
         msg = bot.reply_to(message, "⏳ Checking...")
 
         # Start animation
         animate_checking(message.chat.id, msg.message_id)
 
-        # download image
+        # Download image
         file_info = bot.get_file(message.photo[-1].file_id)
         downloaded_file = bot.download_file(file_info.file_path)
 
@@ -77,35 +76,27 @@ def handle_photo(message):
             f.write(downloaded_file)
 
         # OCR
-        img = Image.open("team.jpg")
-
-       # 👉 grayscale (midabka ka saar)
-        img = img.convert('L')
-
-        # 👉 size ka weyne (accuracy kordhin)
+        img = Image.open("team.jpg").convert('L')  # grayscale
         img = img.resize((img.width * 2, img.height * 2))
-
-        # 👉 threshold (contrast sare)
         img = img.point(lambda x: 0 if x < 140 else 255)
 
-        # 👉 OCR read (digits only)
+        # OCR read (digits only)
         custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789'
         text = pytesseract.image_to_string(img, config=custom_config)
 
-         print("OCR TEXT:", text)  # debug
+        print("OCR TEXT:", text)  # debug
 
         numbers = re.findall(r'\d{4}', text)
 
         rating = None
         for num in numbers:
-            num = int(num)
-            if 3000 < num < 3500:
-                rating = num
+            num_int = int(num)
+            if 3000 < num_int < 3500:
+                rating = num_int
                 break
 
         if rating:
             price = get_price(rating)
-
             if price:
                 final_text = f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
@@ -120,19 +111,23 @@ def handle_photo(message):
         else:
             final_text = "❌ Sawirkan ma aha shax eFootball ah.\n\n👉 Fadlan soo dir shaxdaada si loo qiimeeyo Qiimaheeda $"
 
-        # Edit final result (NO DELETE)
-        bot.edit_message_text(
-            final_text,
-            message.chat.id,
-            msg.message_id,
-            parse_mode="Markdown"
-        )
+        # Send final result safely
+        try:
+            bot.edit_message_text(
+                final_text,
+                message.chat.id,
+                msg.message_id,
+                parse_mode="Markdown"
+            )
+        except Exception:
+            bot.send_message(message.chat.id, final_text)
 
     except Exception as e:
+        print("ERROR:", e)
         bot.send_message(message.chat.id, "❌ Qalad ayaa dhacay, isku day mar kale")
 
 # ==============================
-# RUN
+# RUN BOT
 # ==============================
 print("Bot is running...")
-bot.infinity_polling()
+bot.infinity_polling(timeout=10, long_polling_timeout=5)
