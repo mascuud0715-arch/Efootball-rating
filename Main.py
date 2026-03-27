@@ -78,7 +78,21 @@ def handle_photo(message):
 
         # OCR
         img = Image.open("team.jpg")
-        text = pytesseract.image_to_string(img)
+
+       # 👉 grayscale (midabka ka saar)
+        img = img.convert('L')
+
+        # 👉 size ka weyne (accuracy kordhin)
+        img = img.resize((img.width * 2, img.height * 2))
+
+        # 👉 threshold (contrast sare)
+        img = img.point(lambda x: 0 if x < 140 else 255)
+
+        # 👉 OCR read (digits only)
+        custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789'
+        text = pytesseract.image_to_string(img, config=custom_config)
+
+         print("OCR TEXT:", text)  # debug
 
         numbers = re.findall(r'\d{4}', text)
 
