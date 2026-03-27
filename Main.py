@@ -102,10 +102,10 @@ def admin_panel_buttons(chat_id):
 # ==============================
 # BUTTON HANDLER
 # ==============================
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video'])
 def handle_buttons(msg):
     chat_id = msg.chat.id
-    text = msg.text
+    text = msg.text if msg.content_type == 'text' else None
     is_admin = (msg.from_user.id == ADMIN_ID)
     state = get_admin_state(chat_id)
 
@@ -173,27 +173,16 @@ def handle_buttons(msg):
     # BROADCAST LOGIC
     # --------------------------
     if state == 'broadcast':
-        # Text only
-        if msg.content_type == 'text':
-            text_to_send = msg.text
-            for u in users_col.find({}):
-                try: bot.send_message(u['chat_id'], text_to_send)
-                except: pass
-            bot.send_message(chat_id, "✅ Broadcast text waa la diray dhammaan users.")
-        # Photo
-        elif msg.content_type == 'photo':
-            file_id = msg.photo[-1].file_id
-            for u in users_col.find({}):
-                try: bot.send_photo(u['chat_id'], file_id)
-                except: pass
-            bot.send_message(chat_id, "✅ Broadcast photo waa la diray dhammaan users.")
-        # Video
-        elif msg.content_type == 'video':
-            file_id = msg.video.file_id
-            for u in users_col.find({}):
-                try: bot.send_video(u['chat_id'], file_id)
-                except: pass
-            bot.send_message(chat_id, "✅ Broadcast video waa la diray dhammaan users.")
+        for u in users_col.find({}):
+            try:
+                if msg.content_type == 'text':
+                    bot.send_message(u['chat_id'], msg.text)
+                elif msg.content_type == 'photo':
+                    bot.send_photo(u['chat_id'], msg.photo[-1].file_id)
+                elif msg.content_type == 'video':
+                    bot.send_video(u['chat_id'], msg.video.file_id)
+            except: pass
+        bot.send_message(chat_id, "✅ Broadcast waa la diray dhammaan users.")
         set_admin_state(chat_id, None)
         return
 
@@ -216,7 +205,7 @@ def handle_photo(message):
 # ==============================
 # HANDLE ADMIN RATING + PRICE
 # ==============================
-@bot.message_handler(func=lambda m: get_admin_state(m.chat.id) == 'awaiting_rating_price')
+@bot.message_handler(func=lambda m: get_admin_state(m.chat.id) == 'awaiting_rating_price', content_types=['text'])
 def handle_admin_rating_price(msg):
     chat_id = msg.chat.id
     try:
