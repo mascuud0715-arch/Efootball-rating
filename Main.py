@@ -29,7 +29,7 @@ def get_price(rating):
     elif 3150 < rating <= 3170: return random.randint(7, 10)
     elif 3170 < rating <= 3190: return random.randint(9, 12)
     elif 3190 < rating <= 3210: return random.randint(10, 14)
-    elif 3210 < rating <= 3250: return random.randint(20, 35)
+    elif 3210 < rating <= 3250: return random.randint(20, 40)
     elif 3250 < rating <= 3310: return random.randint(40, 100)
     else: return None
 
@@ -77,6 +77,7 @@ def main_menu_buttons(chat_id, is_admin=False):
     markup.add(KeyboardButton("📈 Shaxda Suuqa Maanta"))
     if is_admin:
         markup.add(KeyboardButton("🛠️ Admin Panel"))
+    bot.send_message(chat_id, "Riix button-ka hoose:", reply_markup=markup)
 
 # ==============================
 # ADMIN PANEL BUTTONS
@@ -164,6 +165,7 @@ def handle_buttons(msg):
 
         elif text == "Back":
             main_menu_buttons(chat_id, True)
+            set_admin_state(chat_id, None)
             return
 
     # --------------------------
@@ -209,7 +211,7 @@ def handle_photo(message):
     # --------------------------
     # BROADCAST PHOTO
     # --------------------------
-    if state == 'broadcast' and chat_id == ADMIN_ID:
+    if state == 'broadcast' and user_is_admin(message.from_user.id):
         for user_id in get_all_users():
             bot.send_photo(user_id, message.photo[-1].file_id)
         bot.send_message(chat_id, "✅ Broadcast photo waa la diray dhammaan users-ka.")
@@ -228,7 +230,7 @@ def handle_photo(message):
 @bot.message_handler(content_types=['video'])
 def handle_video(message):
     chat_id = message.chat.id
-    if get_admin_state(chat_id) == 'broadcast' and chat_id == ADMIN_ID:
+    if get_admin_state(chat_id) == 'broadcast' and message.from_user.id == ADMIN_ID:
         for user_id in get_all_users():
             bot.send_video(user_id, message.video.file_id)
         bot.send_message(chat_id, "✅ Broadcast video waa la diray dhammaan users-ka.")
