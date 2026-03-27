@@ -40,7 +40,7 @@ def get_price(rating):
     else: return 0
 
 # ==============================
-# USER SYSTEM
+# USER SYSTEM + REFERRAL FIX
 # ==============================
 def add_user(chat_id, username=None):
     user = users_col.find_one({"chat_id": chat_id})
@@ -98,7 +98,7 @@ def reset_today_market():
     market_col.delete_many({"today": True})
 
 # ==============================
-# START
+# START + REFERRAL SYSTEM FIXED
 # ==============================
 @bot.message_handler(commands=['start'])
 def start(msg):
@@ -109,8 +109,8 @@ def start(msg):
     add_user(chat_id, username)
     user = get_user(chat_id)
 
-    # referral
     args = msg.text.split()
+
     if len(args) > 1:
         try:
             ref = int(args[1])
@@ -118,6 +118,16 @@ def start(msg):
 
             if owner and owner["chat_id"] != chat_id:
                 users_col.update_one({"ref": ref}, {"$inc": {"invited": 1}})
+
+                invited = owner.get("invited", 0) + 1
+                left = 20 - invited
+
+                if invited >= 20:
+                    bot.send_message(owner["chat_id"],
+                        "🎉 Waxaad gaartay 20 qof!\nLa xiriir admin si aad u hesho shaxda")
+                else:
+                    bot.send_message(owner["chat_id"],
+                        f"👥 Waxaad keentay {invited} qof\n{left} baa kaa haray 👋")
         except:
             pass
 
@@ -167,13 +177,32 @@ def handle(msg):
         user = get_user(chat_id)
 
     # =============================
-    # ADMIN PANEL BUTTONS (FIXED)
+    # ADMIN PANEL
     # =============================
+    if text == "🛠️ Admin Panel" and is_admin:
+        admin_panel(chat_id)
+        return
+
     if is_admin:
 
         if text == "📊 Stats":
             bot.send_message(chat_id,
-                f"👥 Total: {get_total_users()}\n🆕 Today: {get_today_users()}")
+                f"📊 STATS\n\n👥 Total: {get_total_users()}\n🆕 Today: {get_today_users()}")
+            return
+
+        if text == "🔍 Checker":
+            bot.send_message(chat_id, "Gali ref number:")
+            admin_state[chat_id] = "check"
+            return
+
+        if text == "🎁 Add Free Shax":
+            bot.send_message(chat_id, "Dir sawir:")
+            admin_state[chat_id] = "free_photo"
+            return
+
+        if text == "❌ Delete Free Shax":
+            delete_free()
+            bot.send_message(chat_id, "✅ Waa la tirtiray")
             return
 
         if text == "Broadcast Text":
@@ -192,13 +221,11 @@ def handle(msg):
             return
 
     # =============================
-    # BROADCAST SYSTEM (FIXED)
+    # BROADCAST
     # =============================
     state = admin_state.get(chat_id)
     if state:
-        users = get_all_users()
-
-        for u in users:
+        for u in get_all_users():
             try:
                 if state == "text":
                     bot.send_message(u, msg.text)
@@ -214,7 +241,26 @@ def handle(msg):
         return
 
     # =============================
-    # FREE SHAX
+    # CHECKER STATE
+    # =============================
+    if admin_state.get(chat_id) == "check":
+        try:
+            ref = int(msg.text)
+            u = users_col.find_one({"ref": ref})
+
+            if u:
+                bot.send_message(chat_id,
+                    f"👤 @{u.get('username')}\n👥 Invited: {u.get('invited',0)}")
+            else:
+                bot.send_message(chat_id, "❌ lama helin")
+        except:
+            bot.send_message(chat_id, "❌ Error")
+
+        admin_state.pop(chat_id)
+        return
+
+    # =============================
+    # FREE SHAX USER
     # =============================
     if text == "🎁 SHAXAHA FREE":
         data = get_free()
@@ -231,22 +277,14 @@ def handle(msg):
 🔗 Link:
 {BOT_LINK}{user['ref']}
 
-👥 {user['invited']}/20""")
+👥 {user.get('invited',0)}/20
+
+🔥 Keen 20 qof si aad u hesho shaxdan""")
         return
 
     # =============================
-    # ADD FREE SHAX
+    # FREE ADD STATES
     # =============================
-    if text == "🎁 Add Free Shax" and is_admin:
-        bot.send_message(chat_id, "Dir sawir:")
-        admin_state[chat_id] = "free_photo"
-        return
-
-    if text == "❌ Delete Free Shax" and is_admin:
-        delete_free()
-        bot.send_message(chat_id, "✅ Waa la tirtiray")
-        return
-
     if admin_state.get(chat_id) == "free_photo" and msg.content_type == "photo":
         admin_state["photo"] = msg.photo[-1].file_id
         admin_state[chat_id] = "free_rating"
@@ -271,10 +309,6 @@ def handle(msg):
             bot.send_message(chat_id, "❌ Wali lama dhigin")
         return
 
-    if text == "🛠️ Admin Panel" and is_admin:
-        admin_panel(chat_id)
-        return
-
     # =============================
     # USER FLOW
     # =============================
@@ -284,20 +318,24 @@ def handle(msg):
         return
 
     if chat_id in manual_ratings:
-        rating = int(msg.text)
-        price = get_price(rating)
+        try:
+            rating = int(msg.text)
+            price = get_price(rating)
 
-        bot.send_message(chat_id,
+            bot.send_message(chat_id,
 f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
 💰 Qiimaha: ${price}
 
-📢 Ka iibso shaxo 👇
+📢 Ka iibso shaxo iyo Coins 👇
 {WHATSAPP_LINK}
 """, parse_mode="Markdown")
 
-        manual_ratings.pop(chat_id)
+            manual_ratings.pop(chat_id)
+        except:
+            bot.send_message(chat_id, "❌ Error")
+        return
 
 # ==============================
 # RUN
