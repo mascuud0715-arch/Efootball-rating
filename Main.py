@@ -182,16 +182,16 @@ def handle(msg):
     # FREE SHAX USER VIEW
     # =============================
     if text == "🎁 SHAXAHA FREE":
-        data = get_free_shax()
+    data = get_free_shax()
 
-        if not data:
-            bot.send_message(chat_id, "❌ Free shax ma jiro")
-            return
+    if not data:
+        bot.send_message(chat_id, "❌ Free shax ma jiro")
+        return
 
-        ref = user.get("ref_id")
-        invited = user.get("invited", 0)
+    ref = user.get("ref_id")
+    invited = user.get("invited", 0)
 
-        caption = f"""🎁 FREE SHAX
+    caption = f"""🎁 FREE SHAX
 
 📊 Rating: {data['rating']}
 
@@ -201,8 +201,27 @@ def handle(msg):
 👥 Invited: {invited}/20
 """
 
-        bot.send_photo(chat_id, data['photo'], caption=caption)
-        return
+    bot.send_photo(chat_id, data['photo'], caption=caption)
+
+    # ✅ QAYBTA CUSUB
+    bot.send_message(chat_id,
+        f"""👋 Si aad u hesho SHAXDAN FREE:
+
+👥 Waa inaad keentaa 20 qof oo bot-kan isticmaala
+
+📊 Hadda waxaad joogtaa: {invited}/20
+
+🔗 Link-gaaga:
+{BOT_LINK}{ref}
+
+🔥 La wadaag link-gaaga saaxiibadaada oo keen dadka!
+
+Markaad gaarto 20 qof:
+🎉 Waxaad heli doontaa shaxda
+
+Keep going 💪"""
+    )
+    return
 
     # =============================
     # MARKET
