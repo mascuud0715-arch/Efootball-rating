@@ -64,6 +64,7 @@ def admin_panel_buttons(chat_id):
         KeyboardButton("Update Shax Cusub"),
         KeyboardButton("Delete Shaxda Maanta"),
         KeyboardButton("Broadcast Fariin"),
+        KeyboardButton("📊 Stats"),
         KeyboardButton("Back")
     )
     bot.send_message(chat_id, "🛠️ Admin Panel:", reply_markup=markup)
@@ -125,6 +126,14 @@ def handle_buttons(msg):
             bot.send_message(chat_id, "📢 Fadlan soo dir fariinta broadcast (text, photo ama video):")
             admin_state[chat_id] = 'broadcast'
             return
+
+# ==============================
+# ADMIN BUTTON STATS
+# ==============================
+@bot.message_handler(func=lambda m: m.text == "📊 Stats" and m.from_user.id == ADMIN_ID)
+def admin_stats(msg):
+    total_users = len(all_users)
+    bot.send_message(msg.chat.id, f"📊 Tirada users-ka isticmaala bot-ka: {total_users}")
 
         elif text == "Back":
             main_menu_buttons(chat_id, True)
