@@ -343,11 +343,21 @@ def handle(msg):
         return
 
     if chat_id in manual_ratings:
-        try:
-            rating = int(msg.text)
-            price = get_price(rating)
 
-            bot.send_message(chat_id,
+    if not msg.text:
+        bot.send_message(chat_id, "❌ Fadlan qor number kaliya")
+        return
+
+    text_clean = msg.text.strip()
+
+    if not text_clean.isdigit():
+        bot.send_message(chat_id, "❌ Geli number sax ah")
+        return
+
+    rating = int(text_clean)
+    price = get_price(rating)
+
+    bot.send_message(chat_id,
 f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
@@ -357,11 +367,8 @@ f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 {WHATSAPP_LINK}
 """, parse_mode="Markdown")
 
-        except:
-            bot.send_message(chat_id, "❌ Geli number sax ah")
-
-        manual_ratings.pop(chat_id)
-        return
+    manual_ratings.pop(chat_id)
+    return
 
 # ==============================
 # RUN
