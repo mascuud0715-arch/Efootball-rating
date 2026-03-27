@@ -52,6 +52,13 @@ def get_admin_state(chat_id):
 def set_admin_state(chat_id, state):
     admin_state_col.update_one({"chat_id": chat_id}, {"$set": {"state": state}}, upsert=True)
 
+def set_admin_temp_data(chat_id, key, value):
+    admin_state_col.update_one({"chat_id": chat_id}, {"$set": {key: value}}, upsert=True)
+
+def get_admin_temp_data(chat_id, key):
+    doc = admin_state_col.find_one({"chat_id": chat_id})
+    return doc.get(key) if doc else None
+
 def add_user(chat_id):
     users_col.update_one({"chat_id": chat_id}, {"$set": {"chat_id": chat_id}}, upsert=True)
 
@@ -197,21 +204,22 @@ def handle_buttons(msg):
 def handle_photo(message):
     chat_id = message.chat.id
     state = get_admin_state(chat_id)
+    user_is_admin = (message.from_user.id == ADMIN_ID)
 
     # --------------------------
     # ADMIN PHOTO
     # --------------------------
-    if state in ['add_new', 'update']:
+    if state in ['add_new', 'update'] and user_is_admin:
         photo_id = message.photo[-1].file_id
         bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25):")
         set_admin_state(chat_id, 'awaiting_rating_price')
-        admin_state_col.update_one({"chat_id": chat_id}, {"$set": {"photo_file_id": photo_id}}, upsert=True)
+        set_admin_temp_data(chat_id, 'photo_file_id', photo_id)
         return
 
     # --------------------------
     # BROADCAST PHOTO
     # --------------------------
-    if state == 'broadcast' and user_is_admin(message.from_user.id):
+    if state == 'broadcast' and user_is_admin:
         for user_id in get_all_users():
             bot.send_photo(user_id, message.photo[-1].file_id)
         bot.send_message(chat_id, "✅ Broadcast photo waa la diray dhammaan users-ka.")
@@ -249,8 +257,7 @@ def handle_admin_rating_price(msg):
             return
         rating = int(parts[0])
         price = float(parts[1])
-        state_doc = admin_state_col.find_one({"chat_id": chat_id})
-        photo_id = state_doc.get('photo_file_id') if state_doc else None
+        photo_id = get_admin_temp_data(chat_id, 'photo_file_id')
         if not photo_id:
             bot.send_message(chat_id, "❌ Wax sawir ah lama hayo. Fadlan dib u soo dir sawirka.")
             return
@@ -263,6 +270,8 @@ def handle_admin_rating_price(msg):
         bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\n📊 Rating: {rating}\n💰 Qiimaha: ${price}")
         admin_panel_buttons(chat_id)
         set_admin_state(chat_id, None)
+        # Clear temporary photo
+        set_admin_temp_data(chat_id, 'photo_file_id', None)
     except:
         bot.send_message(chat_id, "❌ Fadlan qor number sax ah oo qaab: Rating Price (tusaale: 3150 25)")
 
