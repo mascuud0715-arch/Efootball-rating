@@ -13,12 +13,15 @@ bot = telebot.TeleBot(TOKEN)
 
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
+BOT_LINK = "https://t.me/Efootball_seller_bot?start="
 
 MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client['efb_bot']
+
 users_col = db['users']
 market_col = db['market']
+free_col = db['free']
 
 # ==============================
 # PRICE SYSTEM
@@ -40,15 +43,41 @@ manual_ratings = {}
 admin_state = {}
 
 # ==============================
+# USER SYSTEM (REFERRAL)
+# ==============================
+def add_user(chat_id, username=None):
+    user = users_col.find_one({"chat_id": chat_id})
+
+    if not user:
+        ref_id = random.randint(10000, 99999)
+
+        users_col.insert_one({
+            "chat_id": chat_id,
+            "username": username,
+            "ref_id": ref_id,
+            "invited": 0,
+            "date": datetime.utcnow().date().isoformat()
+        })
+
+def get_user(chat_id):
+    return users_col.find_one({"chat_id": chat_id})
+
+# ==============================
+# FREE SHAX
+# ==============================
+def set_free_shax(photo, rating):
+    free_col.delete_many({})
+    free_col.insert_one({
+        "photo": photo,
+        "rating": rating
+    })
+
+def get_free_shax():
+    return free_col.find_one() or {}
+
+# ==============================
 # MONGO HELPERS
 # ==============================
-def add_user(chat_id):
-    users_col.update_one(
-        {"chat_id": chat_id},
-        {"$set": {"chat_id": chat_id, "date": datetime.utcnow().date().isoformat()}},
-        upsert=True
-    )
-
 def get_total_users():
     return users_col.count_documents({})
 
@@ -73,14 +102,37 @@ def reset_today_market():
     market_col.delete_many({"today": True})
 
 # ==============================
-# START
+# START (REFERRAL SYSTEM)
 # ==============================
 @bot.message_handler(commands=['start'])
 def start(msg):
     chat_id = msg.chat.id
     is_admin = (msg.from_user.id == ADMIN_ID)
 
-    add_user(chat_id)
+    args = msg.text.split()
+
+    add_user(chat_id, msg.from_user.username)
+
+    # referral
+    if len(args) > 1:
+        try:
+            ref = int(args[1])
+            owner = users_col.find_one({"ref_id": ref})
+
+            if owner and owner["chat_id"] != chat_id:
+                users_col.update_one({"ref_id": ref}, {"$inc": {"invited": 1}})
+
+                invited = owner.get("invited", 0) + 1
+                left = 20 - invited
+
+                if invited >= 20:
+                    bot.send_message(owner["chat_id"],
+                        "🎉 Hambalyo! waxaad gaartay 20 qof.\nLa xiriir admin si aad u hesho shaxda.")
+                else:
+                    bot.send_message(owner["chat_id"],
+                        f"👥 Waxaad keentay {invited} qof\n{left} baa kaa haray 👋")
+        except:
+            pass
 
     bot.reply_to(msg, "👋 Soo dir sawirka shaxda eFootball si loo qiimeeyo 💰")
     main_menu(chat_id, is_admin)
@@ -90,7 +142,10 @@ def start(msg):
 # ==============================
 def main_menu(chat_id, is_admin=False):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton("📈 Shaxda Suuqa Maanta"))
+    markup.add(
+        KeyboardButton("📈 Shaxda Suuqa Maanta"),
+        KeyboardButton("🎁 SHAXAHA FREE")
+    )
 
     if is_admin:
         markup.add(KeyboardButton("🛠️ Admin Panel"))
@@ -106,6 +161,8 @@ def admin_panel(chat_id):
         KeyboardButton("Broadcast Text"),
         KeyboardButton("Broadcast Photo"),
         KeyboardButton("Broadcast Video"),
+        KeyboardButton("🎁 Add Free Shax"),
+        KeyboardButton("🔍 Checker"),
         KeyboardButton("Back")
     )
     bot.send_message(chat_id, "🛠️ Admin Panel", reply_markup=markup)
@@ -119,8 +176,36 @@ def handle(msg):
     text = msg.text if msg.content_type == 'text' else None
     is_admin = (msg.from_user.id == ADMIN_ID)
 
+    user = get_user(chat_id)
+
     # =============================
-    # MAIN MENU
+    # FREE SHAX USER VIEW
+    # =============================
+    if text == "🎁 SHAXAHA FREE":
+        data = get_free_shax()
+
+        if not data:
+            bot.send_message(chat_id, "❌ Free shax ma jiro")
+            return
+
+        ref = user.get("ref_id")
+        invited = user.get("invited", 0)
+
+        caption = f"""🎁 FREE SHAX
+
+📊 Rating: {data['rating']}
+
+🔗 Link-gaaga:
+{BOT_LINK}{ref}
+
+👥 Invited: {invited}/20
+"""
+
+        bot.send_photo(chat_id, data['photo'], caption=caption)
+        return
+
+    # =============================
+    # MARKET
     # =============================
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
@@ -146,9 +231,18 @@ def handle(msg):
         if text == "📊 Stats":
             total = get_total_users()
             today = get_today_users()
-
             bot.send_message(chat_id,
                 f"📊 STATS\n\n👥 Total Users: {total}\n🆕 Today Users: {today}")
+            return
+
+        elif text == "🎁 Add Free Shax":
+            bot.send_message(chat_id, "📸 Soo dir sawirka FREE shax:")
+            admin_state[chat_id] = "free_photo"
+            return
+
+        elif text == "🔍 Checker":
+            bot.send_message(chat_id, "Gali REF number:")
+            admin_state[chat_id] = "check"
             return
 
         elif text == "Gali Shax Cusub":
@@ -161,49 +255,50 @@ def handle(msg):
             bot.send_message(chat_id, "✅ Waa la tirtiray")
             return
 
-        elif text == "Broadcast Text":
-            bot.send_message(chat_id, "Qor fariin:")
-            admin_state[chat_id] = "text"
-            return
-
-        elif text == "Broadcast Photo":
-            bot.send_message(chat_id, "Dir sawir:")
-            admin_state[chat_id] = "photo"
-            return
-
-        elif text == "Broadcast Video":
-            bot.send_message(chat_id, "Dir video:")
-            admin_state[chat_id] = "video"
-            return
-
         elif text == "Back":
             main_menu(chat_id, True)
             return
 
     # =============================
-    # BROADCAST
+    # ADMIN STATES
     # =============================
     state = admin_state.get(chat_id)
-    if state:
-        users = get_all_users()
 
-        for u in users:
-            try:
-                if state == "text":
-                    bot.send_message(u, msg.text)
-                elif state == "photo":
-                    bot.send_photo(u, msg.photo[-1].file_id)
-                elif state == "video":
-                    bot.send_video(u, msg.video.file_id)
-            except:
-                pass
+    if state == "free_photo" and msg.content_type == "photo":
+        admin_state["photo"] = msg.photo[-1].file_id
+        admin_state[chat_id] = "free_rating"
+        bot.send_message(chat_id, "Qor rating:")
+        return
 
-        bot.send_message(chat_id, "✅ Broadcast done")
-        admin_state.pop(chat_id)
+    elif state == "free_rating":
+        try:
+            rating = int(msg.text)
+            set_free_shax(admin_state["photo"], rating)
+
+            bot.send_message(chat_id, "✅ Free shax waa la dhigay")
+            admin_state.pop(chat_id)
+        except:
+            bot.send_message(chat_id, "❌ Error")
+        return
+
+    elif state == "check":
+        try:
+            ref = int(msg.text)
+            user = users_col.find_one({"ref_id": ref})
+
+            if user:
+                bot.send_message(chat_id,
+                    f"👤 @{user.get('username')}\n👥 Invited: {user.get('invited',0)}")
+            else:
+                bot.send_message(chat_id, "❌ lama helin")
+
+            admin_state.pop(chat_id)
+        except:
+            bot.send_message(chat_id, "❌ Error")
         return
 
     # =============================
-    # USER FLOW
+    # USER FLOW (NORMAL)
     # =============================
     if msg.content_type == 'photo':
         bot.reply_to(msg, "Qor rating:")
