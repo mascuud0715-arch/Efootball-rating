@@ -334,15 +334,15 @@ def handle(msg):
             bot.send_message(chat_id, "❌ Wali lama dhigin")
         return
 
-    # =============================
-    # USER RATING
-    # =============================
-    if msg.content_type == "photo":
-        manual_ratings[chat_id] = True
-        bot.reply_to(msg, "Qor rating:")
-        return
+# =============================
+# USER RATING
+# =============================
+if msg.content_type == "photo":
+    manual_ratings[chat_id] = True
+    bot.reply_to(msg, "Qor rating:")
+    return
 
-    if chat_id in manual_ratings:
+if chat_id in manual_ratings:
 
     if not msg.text:
         bot.send_message(chat_id, "❌ Fadlan qor number kaliya")
