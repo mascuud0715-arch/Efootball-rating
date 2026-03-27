@@ -82,16 +82,18 @@ def handle_photo(message):
 
         # OCR read (digits only)
         custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789'
-        text = pytesseract.image_to_string(img, config=custom_config)
+        raw_text = pytesseract.image_to_string(img, config=custom_config)
 
-        print("OCR TEXT:", text)  # debug
+        # Hagaajinta OCR errors caadiga ah
+        raw_text = raw_text.replace("O", "0").replace("I", "1").replace("l", "1")
 
-        numbers = re.findall(r'\d{4}', text)
+        print("OCR TEXT:", raw_text)  # debug
 
+        numbers = re.findall(r'\d{4}', raw_text)
         rating = None
         for num in numbers:
             num_int = int(num)
-            if 3000 < num_int < 3500:
+            if 3000 < num_int < 3500:  # safe range
                 rating = num_int
                 break
 
@@ -103,13 +105,13 @@ def handle_photo(message):
 📊 Rating: {rating}
 💰 Qiimaha: ${price}
 
-📢 Fadlan Ka iibso shaxo iyo Coinsba La hubo 100% Tayo sare Groupkan Mahadsanid 👇
+📢 Fadlan Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇
 {WHATSAPP_LINK}
 """
             else:
                 final_text = "❌ Rating-ka lama taageerin"
         else:
-            final_text = "❌ Sawirkan ma aha shax eFootball ah.\n\n👉 Fadlan soo dir shaxdaada si loo qiimeeyo Qiimaheeda $"
+            final_text = "❌ Sawirkan ma aha shax eFootball ah ama OCR-ku ma aqoonsan"
 
         # Send final result safely
         try:
