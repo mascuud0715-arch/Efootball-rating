@@ -76,7 +76,10 @@ def handle_buttons(msg):
     # MAIN MENU ACTIONS
     # --------------------------
     if text == "📈 Shaxda Suuqa Maanta":
-        if 'photo_file_id' in today_market and 'rating' in today_market and 'price' in today_market:
+        # Hubi in sawir, rating iyo price dhammaantood la keydiyay
+        if ('photo_file_id' in today_market and 
+            'rating' in today_market and 
+            'price' in today_market):
             rating = today_market['rating']
             price = today_market['price']
             caption = f"""🔥 Shaxda Suuqa Maanta 🔥
@@ -183,6 +186,7 @@ def handle_admin_rating_price(msg):
             return
         rating = int(parts[0])
         price = float(parts[1])
+        # Keydi sawirka + rating + price dhammaantood
         today_market['rating'] = rating
         today_market['price'] = price
         admin_state[chat_id] = None
