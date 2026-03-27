@@ -333,28 +333,27 @@ def handle(msg):
         else:
             bot.send_message(chat_id, "❌ Wali lama dhigin")
         return
-        
-# =============================
-# USER RATING
-# =============================
-if msg.content_type == "photo":
-    manual_ratings[chat_id] = True
-    bot.reply_to(msg, "Qor rating:")
-    return
 
-# muhiim: hubi in text yahay
-if msg.content_type == "text" and chat_id in manual_ratings:
-
-    text_clean = msg.text.strip()
-
-    if not text_clean.isdigit():
-        bot.send_message(chat_id, "❌ Geli number sax ah")
+    # =============================
+    # USER RATING
+    # =============================
+    if msg.content_type == "photo":
+        manual_ratings[chat_id] = True
+        bot.reply_to(msg, "Qor rating:")
         return
 
-    rating = int(text_clean)
-    price = get_price(rating)
+    if msg.content_type == "text" and chat_id in manual_ratings:
 
-    bot.send_message(chat_id,
+        text_clean = msg.text.strip()
+
+        if not text_clean.isdigit():
+            bot.send_message(chat_id, "❌ Geli number sax ah")
+            return
+
+        rating = int(text_clean)
+        price = get_price(rating)
+
+        bot.send_message(chat_id,
 f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
@@ -364,8 +363,8 @@ f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 {WHATSAPP_LINK}
 """, parse_mode="Markdown")
 
-    manual_ratings.pop(chat_id)
-    return
+        manual_ratings.pop(chat_id)
+        return
 
 # ==============================
 # RUN
