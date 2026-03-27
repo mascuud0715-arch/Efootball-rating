@@ -1,2 +1,12 @@
+[project]
+id = "telegram-efb-bot"
+name = "Telegram eFootball Bot"
+
 [phases.setup]
-nixPkgs = ["tesseract"]
+packages = ["tesseract-ocr"]
+
+[phases.build]
+commands = ["pip install -r requirements.txt"]
+
+[phases.start]
+command = "python main.py"
