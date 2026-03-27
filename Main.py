@@ -12,6 +12,14 @@ bot = telebot.TeleBot(TOKEN)
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
+db = client['efb_bot']
+users_col = db['users']
+market_col = db['market']
+admin_state_col = db['admin_state']
+
+
 # ==============================
 # PRICE SYSTEM
 # ==============================
@@ -28,10 +36,7 @@ def get_price(rating):
 # ==============================
 # STORAGE
 # ==============================
-manual_ratings = {}   
-today_market = {}     
-admin_state = {}      
-all_users = set()     
+
 
 # ==============================
 # START COMMAND
