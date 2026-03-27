@@ -28,10 +28,10 @@ def get_price(rating):
 # ==============================
 # STORAGE
 # ==============================
-manual_ratings = {}   # user manual rating input
-today_market = {}     # {'photo_file_id': '', 'rating': int, 'price': int}
-admin_state = {}      # track admin actions
-all_users = set()     # track all user ids
+manual_ratings = {}   
+today_market = {}     
+admin_state = {}      
+all_users = set()     
 
 # ==============================
 # START COMMAND
@@ -127,60 +127,28 @@ def handle_buttons(msg):
             admin_state[chat_id] = 'broadcast'
             return
 
-# ==============================
-# ADMIN BUTTON STATS
-# ==============================
-@bot.message_handler(func=lambda m: m.text == "📊 Stats" and m.from_user.id == ADMIN_ID)
-def admin_stats(msg):
-    total_users = len(all_users)
-    bot.send_message(msg.chat.id, f"📊 Tirada users-ka isticmaala bot-ka: {total_users}")
+        elif text == "📊 Stats":
+            bot.send_message(chat_id, f"📊 Tirada users-ka isticmaala bot-ka: {len(all_users)}")
+            return
 
         elif text == "Back":
             main_menu_buttons(chat_id, True)
             return
 
-    # --------------------------
-    # USER MANUAL RATING INPUT
-    # --------------------------
-    if chat_id in manual_ratings:
-        try:
-            rating = int(text)
-            if rating < 3000 or rating > 3500:
-                bot.reply_to(msg, "❌ Rating-ka waa inuu noqdaa 3000–3500. Dib u qor.")
-                return
-            price = get_price(rating)
-            final_text = f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
-
-📊 Rating: {rating}
-💰 Qiimaha: ${price}
-
-📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇
-{WHATSAPP_LINK}"""
-            bot.send_message(chat_id, final_text)
-            manual_ratings.pop(chat_id)
-        except:
-            bot.reply_to(msg, "❌ Fadlan qoro number sax ah oo 4-digit ah.")
-
 # ==============================
-# PHOTO HANDLER (ADMIN & USER HALIS)
+# PHOTO HANDLER
 # ==============================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     chat_id = message.chat.id
     state = admin_state.get(chat_id)
 
-    # --------------------------
-    # ADMIN PHOTO
-    # --------------------------
     if state in ['add_new', 'update']:
         today_market['photo_file_id'] = message.photo[-1].file_id
         bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25):")
         admin_state[chat_id] = 'awaiting_rating_price'
         return
 
-    # --------------------------
-    # BROADCAST PHOTO
-    # --------------------------
     if state == 'broadcast' and chat_id == ADMIN_ID:
         for user_id in all_users:
             bot.send_photo(user_id, message.photo[-1].file_id)
@@ -188,14 +156,12 @@ def handle_photo(message):
         admin_state[chat_id] = None
         return
 
-    # --------------------------
-    # USER PHOTO (manual rating)
-    # --------------------------
+    # USER PHOTO
     bot.reply_to(message, "📸 Sawirka waa la helay!\nFadlan qor **rating-ka** shaxda eFootball (tusaale: 3150):")
     manual_ratings[chat_id] = True
 
 # ==============================
-# VIDEO HANDLER (BROADCAST)
+# VIDEO HANDLER
 # ==============================
 @bot.message_handler(content_types=['video'])
 def handle_video(message):
