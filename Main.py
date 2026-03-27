@@ -12,6 +12,7 @@ import time
 TOKEN = os.getenv("BOT_TOKEN")  # Telegram bot token
 bot = telebot.TeleBot(TOKEN)
 
+# Path to tesseract executable
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
@@ -45,7 +46,7 @@ def animate_checking(chat_id, message_id):
         text = frames[i % len(frames)]
         try:
             bot.edit_message_text(text, chat_id, message_id)
-        except Exception:
+        except:
             pass
         time.sleep(0.5)
 
@@ -88,23 +89,23 @@ def handle_photo(message):
         downloaded_file = bot.download_file(file_info.file_path)
         with open("team.jpg", "wb") as f: f.write(downloaded_file)
 
-        # Preprocess image
-        img = Image.open("team.jpg").convert('L')
-        img = img.resize((img.width*2, img.height*2))
+        # Preprocess image for better OCR
+        img = Image.open("team.jpg").convert('L')  # grayscale
+        img = img.resize((img.width*3, img.height*3))  # zoom
         img = img.filter(ImageFilter.SHARPEN)
         img = ImageOps.autocontrast(img)
         img = img.point(lambda x: 0 if x < 140 else 255)
 
-        # OCR
-        config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789'
+        # OCR config optimized for single line digits
+        config = r'--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789'
         raw_text = pytesseract.image_to_string(img, config=config)
 
-        # Fix common OCR errors
+        # Fix common OCR mistakes
         raw_text = raw_text.replace("O", "0").replace("I", "1").replace("l", "1")
         raw_text = re.sub(r'[^0-9]', '', raw_text)
-        print("OCR RAW TEXT:", raw_text)
+        print("OCR RAW TEXT:", raw_text)  # debug
 
-        # Check if OCR returned digits
+        # If no digits detected, fallback manual
         if not raw_text:
             bot.edit_message_text(
                 "❌ OCR-ku ma akhriyin wax digits ah.\n\nFadlan qor rating-ka 3000–3500 si manual ah:",
@@ -116,13 +117,13 @@ def handle_photo(message):
         # Find 4-digit rating
         rating = None
         for i in range(len(raw_text)-3):
-            num = raw_text[i:i+4]
             try:
-                n = int(num)
+                n = int(raw_text[i:i+4])
                 if 3000 < n < 3500:
                     rating = n
                     break
-            except: continue
+            except:
+                continue
 
         if rating:
             price = get_price(rating)
@@ -135,8 +136,7 @@ def handle_photo(message):
 {WHATSAPP_LINK}"""
             try:
                 bot.edit_message_text(final_text, message.chat.id, msg.message_id, parse_mode="Markdown")
-            except Exception as e:
-                print("Edit failed:", e)
+            except:
                 bot.send_message(message.chat.id, final_text)
         else:
             bot.edit_message_text(
