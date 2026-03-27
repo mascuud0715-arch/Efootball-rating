@@ -129,45 +129,53 @@ def handle_buttons(msg):
     if text == "🛠️ Admin Panel" and is_admin:
         admin_panel_buttons(chat_id)
         return
+        
+# ==========================
+# ADMIN ACTIONS (FULL)
+# ==========================
+if is_admin:
 
-    if is_admin:
-        # ========================
-        # ADMIN ACTIONS
-        # ========================
-        if text == "Gali Shax Cusub":
-            bot.send_message(chat_id, "📸 Fadlan soo dir sawirka shaxda cusub:")
-            bot.register_next_step_handler(msg, admin_photo_step)
-            return
+    # 📊 STATS
+    if text == "📊 Stats":
+        total = get_total_users()
+        bot.send_message(chat_id, f"📊 Total Users: {total}")
+        return
 
-        elif text == "Delete Shaxda Maanta":
-            reset_today_market()
-            bot.send_message(chat_id, "✅ Shaxda suuqa maanta waa la tirtiray.")
-            admin_panel_buttons(chat_id)
-            return
+    # ➕ ADD MARKET
+    elif text == "Gali Shax Cusub":
+        bot.send_message(chat_id, "📸 Soo dir sawirka shaxda cusub:")
+        bot.register_next_step_handler(msg, admin_photo_step)
+        return
 
-        elif text == "Broadcast Text":
-            bot.send_message(chat_id, "📢 Fadlan qor qoraalka aad rabto inaad u dirto dhamaan users:")
-            admin_state[chat_id] = 'broadcast_text'
-            return
+    # 🗑 DELETE MARKET
+    elif text == "Delete Shaxda Maanta":
+        reset_today_market()
+        bot.send_message(chat_id, "✅ Shaxda suuqa maanta waa la tirtiray.")
+        admin_panel_buttons(chat_id)
+        return
 
-        elif text == "Broadcast Photo":
-            bot.send_message(chat_id, "📸 Fadlan soo dir sawirka aad rabto inaad u dirto dhamaan users:")
-            admin_state[chat_id] = 'broadcast_photo'
-            return
+    # 📢 BROADCAST TEXT
+    elif text == "Broadcast Text":
+        bot.send_message(chat_id, "📢 Fadlan qor fariinta aad rabto:")
+        admin_state[chat_id] = 'broadcast_text'
+        return
 
-         elif text == "📊 Stats":
-            total = get_total_users()
-             bot.send_message(chat_id, f"📊 Total Users: {total}")
-             return
+    # 📸 BROADCAST PHOTO
+    elif text == "Broadcast Photo":
+        bot.send_message(chat_id, "📸 Soo dir sawirka aad rabto:")
+        admin_state[chat_id] = 'broadcast_photo'
+        return
 
-        elif text == "Broadcast Video":
-            bot.send_message(chat_id, "🎥 Fadlan soo dir video-ga aad rabto inaad u dirto dhamaan users:")
-            admin_state[chat_id] = 'broadcast_video'
-            return
+    # 🎥 BROADCAST VIDEO
+    elif text == "Broadcast Video":
+        bot.send_message(chat_id, "🎥 Soo dir video-ga aad rabto:")
+        admin_state[chat_id] = 'broadcast_video'
+        return
 
-        elif text == "Back":
-            main_menu_buttons(chat_id, True)
-            return
+    # 🔙 BACK
+    elif text == "Back":
+        main_menu_buttons(chat_id, True)
+        return
 
     # --------------------------
     # HANDLE BROADCAST
