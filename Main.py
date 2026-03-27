@@ -52,10 +52,10 @@ def get_admin_state(chat_id):
 def set_admin_state(chat_id, state):
     admin_state_col.update_one({"chat_id": chat_id}, {"$set": {"state": state}}, upsert=True)
 
-def set_admin_temp_data(chat_id, key, value):
+def set_admin_temp(chat_id, key, value):
     admin_state_col.update_one({"chat_id": chat_id}, {"$set": {key: value}}, upsert=True)
 
-def get_admin_temp_data(chat_id, key):
+def get_admin_temp(chat_id, key):
     doc = admin_state_col.find_one({"chat_id": chat_id})
     return doc.get(key) if doc else None
 
@@ -102,10 +102,13 @@ def admin_panel_buttons(chat_id):
     bot.send_message(chat_id, "🛠️ Admin Panel:", reply_markup=markup)
 
 # ==============================
+# MANUAL RATINGS
+# ==============================
+manual_ratings = {}
+
+# ==============================
 # BUTTON HANDLER
 # ==============================
-manual_ratings = {}  # temporary manual rating state
-
 @bot.message_handler(func=lambda m: True)
 def handle_buttons(msg):
     chat_id = msg.chat.id
@@ -127,17 +130,14 @@ def handle_buttons(msg):
             bot.send_message(chat_id, "❌ Shaxda suuqa maanta wali lama dhigin. Fadlan sug.")
         return
 
-    elif text == "🛠️ Admin Panel":
-        if not user_is_admin:
-            bot.send_message(chat_id, "❌ Ma aadan ahayn admin.")
-            return
+    # --------------------------
+    # ADMIN PANEL
+    # --------------------------
+    if text == "🛠️ Admin Panel" and user_is_admin:
         admin_panel_buttons(chat_id)
         set_admin_state(chat_id, None)
         return
 
-    # --------------------------
-    # ADMIN PANEL ACTIONS
-    # --------------------------
     if user_is_admin:
         if text == "Gali Shax Cusub":
             bot.send_message(chat_id, "📸 Fadlan soo dir sawirka shaxda cusub:")
@@ -213,7 +213,7 @@ def handle_photo(message):
         photo_id = message.photo[-1].file_id
         bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25):")
         set_admin_state(chat_id, 'awaiting_rating_price')
-        set_admin_temp_data(chat_id, 'photo_file_id', photo_id)
+        set_admin_temp(chat_id, 'photo_file_id', photo_id)
         return
 
     # --------------------------
@@ -227,13 +227,13 @@ def handle_photo(message):
         return
 
     # --------------------------
-    # USER PHOTO (manual rating)
+    # USER PHOTO
     # --------------------------
     bot.reply_to(message, "📸 Sawirka waa la helay!\nFadlan qor **rating-ka** shaxda eFootball (tusaale: 3150):")
     manual_ratings[chat_id] = True
 
 # ==============================
-# VIDEO HANDLER (BROADCAST)
+# VIDEO HANDLER
 # ==============================
 @bot.message_handler(content_types=['video'])
 def handle_video(message):
@@ -245,7 +245,7 @@ def handle_video(message):
         set_admin_state(chat_id, None)
 
 # ==============================
-# HANDLE ADMIN RATING + PRICE
+# ADMIN RATING + PRICE HANDLER
 # ==============================
 @bot.message_handler(func=lambda m: get_admin_state(m.chat.id) == 'awaiting_rating_price')
 def handle_admin_rating_price(msg):
@@ -257,10 +257,11 @@ def handle_admin_rating_price(msg):
             return
         rating = int(parts[0])
         price = float(parts[1])
-        photo_id = get_admin_temp_data(chat_id, 'photo_file_id')
+        photo_id = get_admin_temp(chat_id, 'photo_file_id')
         if not photo_id:
             bot.send_message(chat_id, "❌ Wax sawir ah lama hayo. Fadlan dib u soo dir sawirka.")
             return
+        # Save to market
         set_today_market({
             "today": True,
             "photo_file_id": photo_id,
@@ -270,8 +271,7 @@ def handle_admin_rating_price(msg):
         bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\n📊 Rating: {rating}\n💰 Qiimaha: ${price}")
         admin_panel_buttons(chat_id)
         set_admin_state(chat_id, None)
-        # Clear temporary photo
-        set_admin_temp_data(chat_id, 'photo_file_id', None)
+        set_admin_temp(chat_id, 'photo_file_id', None)
     except:
         bot.send_message(chat_id, "❌ Fadlan qor number sax ah oo qaab: Rating Price (tusaale: 3150 25)")
 
