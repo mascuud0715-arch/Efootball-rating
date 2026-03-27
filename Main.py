@@ -18,7 +18,6 @@ client = MongoClient(MONGO_URI)
 db = client['efb_bot']
 users_col = db['users']
 market_col = db['market']
-admin_state_col = db['admin_state']
 
 # ==============================
 # PRICE SYSTEM
@@ -32,6 +31,12 @@ def get_price(rating):
     elif 3210 < rating <= 3250: return random.randint(20, 40)
     elif 3250 < rating <= 3310: return random.randint(40, 100)
     else: return None
+
+# ==============================
+# STORAGE
+# ==============================
+manual_ratings = {}   # {chat_id: True}
+admin_state = {}      # {chat_id: state} e.g. broadcast
 
 # ==============================
 # MONGO HELPERS
@@ -52,19 +57,8 @@ def set_today_market(photo_file_id, rating, price):
 def reset_today_market():
     market_col.delete_many({"today": True})
 
-def get_admin_state(chat_id):
-    doc = admin_state_col.find_one({"chat_id": chat_id})
-    return doc['state'] if doc else None
-
-def set_admin_state(chat_id, state):
-    admin_state_col.update_one({"chat_id": chat_id}, {"$set": {"state": state}}, upsert=True)
-
-def set_admin_temp(chat_id, key, value):
-    admin_state_col.update_one({"chat_id": chat_id}, {"$set": {key: value}}, upsert=True)
-
-def get_admin_temp(chat_id, key):
-    doc = admin_state_col.find_one({"chat_id": chat_id})
-    return doc.get(key) if doc else None
+def get_all_users():
+    return [u['chat_id'] for u in users_col.find()]
 
 # ==============================
 # START COMMAND
@@ -94,25 +88,26 @@ def admin_panel_buttons(chat_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(
         KeyboardButton("Gali Shax Cusub"),
-        KeyboardButton("Update Shax Cusub"),
         KeyboardButton("Delete Shaxda Maanta"),
-        KeyboardButton("Broadcast"),
-        KeyboardButton("Stats"),
+        KeyboardButton("Broadcast Text"),
+        KeyboardButton("Broadcast Photo"),
+        KeyboardButton("Broadcast Video"),
         KeyboardButton("Back")
     )
     bot.send_message(chat_id, "🛠️ Admin Panel:", reply_markup=markup)
 
 # ==============================
-# BUTTON HANDLER (TEXT/PHOTO/VIDEO)
+# BUTTON HANDLER
 # ==============================
 @bot.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video'])
 def handle_buttons(msg):
     chat_id = msg.chat.id
     text = msg.text if msg.content_type == 'text' else None
     is_admin = (msg.from_user.id == ADMIN_ID)
-    state = get_admin_state(chat_id)
 
+    # --------------------------
     # MAIN MENU
+    # --------------------------
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
         if 'photo_file_id' in today:
@@ -122,26 +117,20 @@ def handle_buttons(msg):
             bot.send_message(chat_id, "❌ Shaxda suuqa maanta wali lama dhigin.")
         return
 
+    # --------------------------
     # ADMIN PANEL
+    # --------------------------
     if text == "🛠️ Admin Panel" and is_admin:
         admin_panel_buttons(chat_id)
-        set_admin_state(chat_id, None)
         return
 
-    # ADMIN ACTIONS
     if is_admin:
+        # ========================
+        # ADMIN ACTIONS
+        # ========================
         if text == "Gali Shax Cusub":
             bot.send_message(chat_id, "📸 Fadlan soo dir sawirka shaxda cusub:")
-            set_admin_state(chat_id, 'add_new')
-            return
-
-        elif text == "Update Shax Cusub":
-            today = get_today_market()
-            if 'photo_file_id' not in today:
-                bot.send_message(chat_id, "❌ Shaxda maanta lama hayo.")
-                return
-            bot.send_message(chat_id, "📸 Fadlan soo dir sawirka cusub:")
-            set_admin_state(chat_id, 'update')
+            bot.register_next_step_handler(msg, admin_photo_step)
             return
 
         elif text == "Delete Shaxda Maanta":
@@ -150,67 +139,103 @@ def handle_buttons(msg):
             admin_panel_buttons(chat_id)
             return
 
-        elif text == "Broadcast":
-            bot.send_message(chat_id, "📢 Fadlan soo dir **text / photo / video** broadcast-ka:")
-            set_admin_state(chat_id, 'broadcast')
+        elif text == "Broadcast Text":
+            bot.send_message(chat_id, "📢 Fadlan qor qoraalka aad rabto inaad u dirto dhamaan users:")
+            admin_state[chat_id] = 'broadcast_text'
             return
 
-        elif text == "Stats":
-            total = users_col.count_documents({})
-            bot.send_message(chat_id, f"📊 Total Users: {total}")
+        elif text == "Broadcast Photo":
+            bot.send_message(chat_id, "📸 Fadlan soo dir sawirka aad rabto inaad u dirto dhamaan users:")
+            admin_state[chat_id] = 'broadcast_photo'
+            return
+
+        elif text == "Broadcast Video":
+            bot.send_message(chat_id, "🎥 Fadlan soo dir video-ga aad rabto inaad u dirto dhamaan users:")
+            admin_state[chat_id] = 'broadcast_video'
             return
 
         elif text == "Back":
             main_menu_buttons(chat_id, True)
             return
 
-    # BROADCAST
-    if state == 'broadcast':
-        for u in users_col.find({}):
-            try:
-                if msg.content_type == 'text':
-                    bot.send_message(u['chat_id'], msg.text)
-                elif msg.content_type == 'photo':
-                    bot.send_photo(u['chat_id'], msg.photo[-1].file_id)
-                elif msg.content_type == 'video':
-                    bot.send_video(u['chat_id'], msg.video.file_id)
-            except: pass
-        bot.send_message(chat_id, "✅ Broadcast waa la diray.")
-        set_admin_state(chat_id, None)
+    # --------------------------
+    # HANDLE BROADCAST
+    # --------------------------
+    state = admin_state.get(chat_id)
+    if state:
+        all_users = get_all_users()
+        try:
+            if state == 'broadcast_text':
+                for u in all_users:
+                    bot.send_message(u, msg.text)
+                bot.send_message(chat_id, f"✅ Broadcast Text waa la diray {len(all_users)} users.")
+                admin_state[chat_id] = None
+                return
+
+            elif state == 'broadcast_photo' and msg.content_type == 'photo':
+                for u in all_users:
+                    bot.send_photo(u, msg.photo[-1].file_id, caption=msg.caption or "")
+                bot.send_message(chat_id, f"✅ Broadcast Photo waa la diray {len(all_users)} users.")
+                admin_state[chat_id] = None
+                return
+
+            elif state == 'broadcast_video' and msg.content_type == 'video':
+                for u in all_users:
+                    bot.send_video(u, msg.video.file_id, caption=msg.caption or "")
+                bot.send_message(chat_id, f"✅ Broadcast Video waa la diray {len(all_users)} users.")
+                admin_state[chat_id] = None
+                return
+        except Exception as e:
+            bot.send_message(chat_id, f"❌ Error broadcast: {e}")
+            admin_state[chat_id] = None
+            return
+
+    # --------------------------
+    # HANDLE USER PHOTO (MANUAL RATING)
+    # --------------------------
+    if msg.content_type == 'photo':
+        bot.reply_to(msg, "📸 Sawirka waa la helay! Fadlan qor **rating-ka** shaxda eFootball (tusaale: 3150):")
+        manual_ratings[chat_id] = True
+        return
+
+    # --------------------------
+    # HANDLE USER RATING
+    # --------------------------
+    if chat_id in manual_ratings:
+        try:
+            rating = int(msg.text)
+            if rating < 3000 or rating > 3500:
+                bot.reply_to(msg, "❌ Rating-ka waa inuu noqdaa 3000–3500. Dib u qor.")
+                return
+            price = get_price(rating)
+            caption = f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
+
+📊 Rating: {rating}
+💰 Qiimaha: ${price}
+
+📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇
+{WHATSAPP_LINK}"""
+            bot.send_message(chat_id, caption)
+            manual_ratings.pop(chat_id)
+        except:
+            bot.reply_to(msg, "❌ Fadlan qoro number sax ah oo 4-digit ah.")
         return
 
 # ==============================
-# HANDLE ADMIN PHOTO + RATING/PRICE
+# ADMIN PHOTO HANDLER (AUTO RATING)
 # ==============================
-@bot.message_handler(content_types=['photo'])
-def handle_admin_photo(message):
-    chat_id = message.chat.id
-    is_admin = (message.from_user.id == ADMIN_ID)
-    state = get_admin_state(chat_id)
-
-    if is_admin and state in ['add_new', 'update']:
-        photo_id = message.photo[-1].file_id
-        set_admin_temp(chat_id, 'photo_file_id', photo_id)
-        set_admin_state(chat_id, 'awaiting_rating_price')
-        bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25)")
-
-@bot.message_handler(func=lambda m: get_admin_state(m.chat.id) == 'awaiting_rating_price', content_types=['text'])
-def handle_admin_rating_price(msg):
+def admin_photo_step(msg):
     chat_id = msg.chat.id
-    try:
-        parts = msg.text.split()
-        if len(parts) != 2:
-            bot.send_message(chat_id, "❌ Fadlan qor Rating iyo Price sida: 3150 25")
-            return
-        rating = int(parts[0])
-        price = float(parts[1])
-        photo_id = get_admin_temp(chat_id, 'photo_file_id')
-        set_today_market(photo_id, rating, price)
-        set_admin_state(chat_id, None)
-        bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\n📊 Rating: {rating}\n💰 Qiimaha: ${price}")
-        admin_panel_buttons(chat_id)
-    except:
-        bot.send_message(chat_id, "❌ Fadlan qor number sax ah oo qaab: Rating Price (tusaale: 3150 25)")
+    if msg.content_type != 'photo':
+        bot.send_message(chat_id, "❌ Fadlan sawir u dir.")
+        bot.register_next_step_handler(msg, admin_photo_step)
+        return
+    photo_id = msg.photo[-1].file_id
+    rating = random.randint(3100, 3300)
+    price = get_price(rating)
+    set_today_market(photo_id, rating, price)
+    bot.send_message(chat_id, f"✅ Shaxda suuqa maanta waa la keydiyay!\n📊 Rating: {rating}\n💰 Qiimaha: ${price}")
+    admin_panel_buttons(chat_id)
 
 # ==============================
 # RUN BOT
