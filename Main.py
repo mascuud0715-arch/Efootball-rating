@@ -333,7 +333,7 @@ def handle(msg):
         else:
             bot.send_message(chat_id, "❌ Wali lama dhigin")
         return
-
+        
 # =============================
 # USER RATING
 # =============================
