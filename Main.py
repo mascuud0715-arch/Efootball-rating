@@ -76,15 +76,12 @@ def start(msg):
 # ==============================
 def main_menu_buttons(chat_id, is_admin=False):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    
-    # Button-kan qof walba wuu arkaa
     markup.add(KeyboardButton("📈 Shaxda Suuqa Maanta"))
     
-    # Button-kan kaliya admin ayaa arka
     if is_admin:
         markup.add(KeyboardButton("🛠️ Admin Panel"))
-    
-    return markup                    
+
+    bot.send_message(chat_id, "Hoos Ka eego shaxda suuqa manta 👇:", reply_markup=markup)                
 
 # ==============================
 # ADMIN PANEL BUTTONS
