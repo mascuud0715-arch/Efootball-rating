@@ -12,7 +12,6 @@ import time
 TOKEN = os.getenv("BOT_TOKEN")  # Telegram bot token
 bot = telebot.TeleBot(TOKEN)
 
-# Path to tesseract executable (update if needed)
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
@@ -44,8 +43,10 @@ def animate_checking(chat_id, message_id):
     frames = ["⏳ Checking.", "⏳ Checking..", "⏳ Checking...", "⏳ Checking...."]
     for i in range(6):
         text = frames[i % len(frames)]
-        try: bot.edit_message_text(text, chat_id, message_id)
-        except: pass
+        try:
+            bot.edit_message_text(text, chat_id, message_id)
+        except Exception:
+            pass
         time.sleep(0.5)
 
 # ==============================
@@ -103,6 +104,15 @@ def handle_photo(message):
         raw_text = re.sub(r'[^0-9]', '', raw_text)
         print("OCR RAW TEXT:", raw_text)
 
+        # Check if OCR returned digits
+        if not raw_text:
+            bot.edit_message_text(
+                "❌ OCR-ku ma akhriyin wax digits ah.\n\nFadlan qor rating-ka 3000–3500 si manual ah:",
+                message.chat.id, msg.message_id
+            )
+            manual_ratings[message.chat.id] = True
+            return
+
         # Find 4-digit rating
         rating = None
         for i in range(len(raw_text)-3):
@@ -123,7 +133,11 @@ def handle_photo(message):
 
 📢 Ka iibso shaxo iyo Coins 100% Tayo sare Groupkan 👇
 {WHATSAPP_LINK}"""
-            bot.edit_message_text(final_text, message.chat.id, msg.message_id, parse_mode="Markdown")
+            try:
+                bot.edit_message_text(final_text, message.chat.id, msg.message_id, parse_mode="Markdown")
+            except Exception as e:
+                print("Edit failed:", e)
+                bot.send_message(message.chat.id, final_text)
         else:
             bot.edit_message_text(
                 "❌ OCR-ku ma aqoonsan rating-ka.\n\nFadlan qor rating-ka 3000–3500 si manual ah:",
