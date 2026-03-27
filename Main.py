@@ -29,7 +29,7 @@ def get_price(rating):
     elif 3150 < rating <= 3170: return random.randint(7, 10)
     elif 3170 < rating <= 3190: return random.randint(9, 12)
     elif 3190 < rating <= 3210: return random.randint(10, 14)
-    elif 3210 < rating <= 3250: return random.randint(20, 40)
+    elif 3210 < rating <= 3250: return random.randint(20, 35)
     elif 3250 < rating <= 3310: return random.randint(40, 100)
     else: return None
 
@@ -77,7 +77,6 @@ def main_menu_buttons(chat_id, is_admin=False):
     markup.add(KeyboardButton("📈 Shaxda Suuqa Maanta"))
     if is_admin:
         markup.add(KeyboardButton("🛠️ Admin Panel"))
-    bot.send_message(chat_id, "Riix button-ka hoose:", reply_markup=markup)
 
 # ==============================
 # ADMIN PANEL BUTTONS
@@ -89,6 +88,7 @@ def admin_panel_buttons(chat_id):
         KeyboardButton("Update Shax Cusub"),
         KeyboardButton("Delete Shaxda Maanta"),
         KeyboardButton("Broadcast Fariin"),
+        KeyboardButton("Stats Admin"),
         KeyboardButton("Back")
     )
     bot.send_message(chat_id, "🛠️ Admin Panel:", reply_markup=markup)
@@ -156,6 +156,12 @@ def handle_buttons(msg):
             set_admin_state(chat_id, 'broadcast')
             return
 
+        elif text == "Stats Admin":
+            total_users = users_col.count_documents({})
+            bot.send_message(chat_id, f"📊 Total Users: {total_users}")
+            admin_panel_buttons(chat_id)
+            return
+
         elif text == "Back":
             main_menu_buttons(chat_id, True)
             return
@@ -197,7 +203,6 @@ def handle_photo(message):
         photo_id = message.photo[-1].file_id
         bot.send_message(chat_id, "📊 Fadlan qor **Rating iyo Qiimaha** shaxda (Tusaale: 3150 25):")
         set_admin_state(chat_id, 'awaiting_rating_price')
-        # temporarily store photo in state
         admin_state_col.update_one({"chat_id": chat_id}, {"$set": {"photo_file_id": photo_id}}, upsert=True)
         return
 
@@ -247,7 +252,6 @@ def handle_admin_rating_price(msg):
         if not photo_id:
             bot.send_message(chat_id, "❌ Wax sawir ah lama hayo. Fadlan dib u soo dir sawirka.")
             return
-        # save to MongoDB
         set_today_market({
             "today": True,
             "photo_file_id": photo_id,
