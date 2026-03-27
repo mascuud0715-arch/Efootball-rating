@@ -1,21 +1,23 @@
 import telebot
 from telebot.types import ReplyKeyboardMarkup
 import random
+import os
 from pymongo import MongoClient
 from datetime import datetime
 
 # ==============================
 # CONFIG
 # ==============================
-TOKEN = "PUT_YOUR_BOT_TOKEN"
-ADMIN_ID = 123456789  # PUT YOUR TELEGRAM ID
-MONGO_URI = "PUT_YOUR_MONGO_URI"
-
+TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
+
+ADMIN_ID = 8669162116  # 🔥 KU BEDDEL ID-GAAGA
+
 BOT_LINK = "https://t.me/Efootball_seller_bot?start="
 
+MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client['efb_bot']
 
@@ -109,34 +111,6 @@ def get_all_users():
     return [u['chat_id'] for u in users_col.find()]
 
 # ==============================
-# MENUS
-# ==============================
-def main_menu(chat_id, is_admin=False):
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("📈 Shaxda Suuqa Maanta", "🎁 SHAXAHA FREE")
-    if is_admin:
-        markup.add("🛠️ Admin Panel")
-    bot.send_message(chat_id, "Dooro option 👇", reply_markup=markup)
-
-def admin_panel(chat_id):
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(
-        "📊 Stats",
-        "Gali Shax Cusub",
-        "Delete Shaxda Maanta",
-        "🎁 Add Free Shax",
-        "❌ Delete Free Shax"
-    )
-    markup.add(
-        "🔍 Checker",
-        "Broadcast Text",
-        "Broadcast Photo",
-        "Broadcast Video"
-    )
-    markup.add("⬅️ Back")
-    bot.send_message(chat_id, "🛠️ Admin Panel", reply_markup=markup)
-
-# ==============================
 # START
 # ==============================
 @bot.message_handler(commands=['start'])
@@ -158,8 +132,34 @@ def start(msg):
         except:
             pass
 
-    bot.send_message(chat_id, "👋 Soo dir sawirka shaxda eFootball si loo qiimeeyo 💰")
+    bot.reply_to(msg, "👋 Soo dir sawirka shaxda eFootball si loo qiimeeyo 💰")
     main_menu(chat_id, is_admin)
+
+# ==============================
+# MENUS
+# ==============================
+def main_menu(chat_id, is_admin=False):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("📈 Shaxda Suuqa Maanta", "🎁 SHAXAHA FREE")
+    if is_admin:
+        markup.add("🛠️ Admin Panel")
+    bot.send_message(chat_id, "Dooro option 👇", reply_markup=markup)
+
+def admin_panel(chat_id):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(
+        "📊 Stats",
+        "Gali Shax Cusub",
+        "Delete Shaxda Maanta",
+        "🎁 Add Free Shax",
+        "❌ Delete Free Shax",
+        "🔍 Checker",
+        "Broadcast Text",
+        "Broadcast Photo",
+        "Broadcast Video",
+        "Back"
+    )
+    bot.send_message(chat_id, "🛠️ Admin Panel", reply_markup=markup)
 
 # ==============================
 # HANDLER
@@ -170,73 +170,194 @@ def handle(msg):
     text = msg.text if msg.content_type == 'text' else None
     is_admin = (msg.from_user.id == ADMIN_ID)
 
-    add_user(chat_id, msg.from_user.username)
     user = get_user(chat_id)
+    if not user:
+        add_user(chat_id)
+        user = get_user(chat_id)
 
+    # =============================
+    # ADMIN PANEL
+    # =============================
+    if text == "🛠️ Admin Panel" and is_admin:
+        admin_panel(chat_id)
+        return
+
+    if is_admin:
+
+        if text == "Back":
+            main_menu(chat_id, True)
+            return
+
+        if text == "📊 Stats":
+            bot.send_message(chat_id,
+                f"👥 Total: {get_total_users()}\n🆕 Today: {get_today_users()}")
+            return
+
+        if text == "🔍 Checker":
+            bot.send_message(chat_id, "Gali ref number:")
+            admin_state[chat_id] = "check"
+            return
+
+        if text == "🎁 Add Free Shax":
+            bot.send_message(chat_id, "Dir sawir:")
+            admin_state[chat_id] = "free_photo"
+            return
+
+        if text == "❌ Delete Free Shax":
+            delete_free()
+            bot.send_message(chat_id, "✅ Waa la tirtiray")
+            return
+
+        if text == "Gali Shax Cusub":
+            bot.send_message(chat_id, "Dir sawirka:")
+            admin_state[chat_id] = "market_photo"
+            return
+
+        if text == "Delete Shaxda Maanta":
+            reset_today_market()
+            bot.send_message(chat_id, "✅ Waa la tirtiray")
+            return
+
+        if text == "Broadcast Text":
+            bot.send_message(chat_id, "Qor fariin:")
+            admin_state[chat_id] = "text"
+            return
+
+        if text == "Broadcast Photo":
+            bot.send_message(chat_id, "Dir sawir:")
+            admin_state[chat_id] = "photo"
+            return
+
+        if text == "Broadcast Video":
+            bot.send_message(chat_id, "Dir video:")
+            admin_state[chat_id] = "video"
+            return
+
+    # =============================
+    # STATES
+    # =============================
+    state = admin_state.get(chat_id)
+
+    if state == "check":
+        try:
+            ref = int(msg.text)
+            u = users_col.find_one({"ref": ref})
+            if u:
+                bot.send_message(chat_id,
+                    f"👤 @{u.get('username')}\n👥 Invited: {u.get('invited',0)}")
+            else:
+                bot.send_message(chat_id, "❌ lama helin")
+        except:
+            bot.send_message(chat_id, "❌ Error")
+        admin_state.pop(chat_id)
+        return
+
+    if state == "free_photo" and msg.content_type == "photo":
+        admin_state["photo"] = msg.photo[-1].file_id
+        admin_state[chat_id] = "free_rating"
+        bot.send_message(chat_id, "Qor rating:")
+        return
+
+    if state == "free_rating":
+        set_free(admin_state["photo"], int(msg.text))
+        bot.send_message(chat_id, "✅ Free shax waa la dhigay")
+        admin_state.pop(chat_id)
+        return
+
+    if state == "market_photo" and msg.content_type == "photo":
+        admin_state["m_photo"] = msg.photo[-1].file_id
+        admin_state[chat_id] = "market_rating"
+        bot.send_message(chat_id, "Qor rating:")
+        return
+
+    if state == "market_rating":
+        admin_state["m_rating"] = int(msg.text)
+        admin_state[chat_id] = "market_price"
+        bot.send_message(chat_id, "Qor price:")
+        return
+
+    if state == "market_price":
+        set_today_market(
+            admin_state["m_photo"],
+            admin_state["m_rating"],
+            int(msg.text)
+        )
+        bot.send_message(chat_id, "✅ Suuqa waa la dhigay")
+        admin_state.pop(chat_id)
+        return
+
+    if state in ["text","photo","video"]:
+        for u in get_all_users():
+            try:
+                if state == "text":
+                    bot.send_message(u, msg.text)
+                elif state == "photo":
+                    bot.send_photo(u, msg.photo[-1].file_id)
+                elif state == "video":
+                    bot.send_video(u, msg.video.file_id)
+            except:
+                pass
+        bot.send_message(chat_id, "✅ Broadcast Done")
+        admin_state.pop(chat_id)
+        return
+
+    # =============================
+    # USER FEATURES
+    # =============================
+    if text == "🎁 SHAXAHA FREE":
+        data = get_free()
+        if not data:
+            bot.send_message(chat_id, "❌ Free shax ma jiro")
+            return
+
+        bot.send_photo(chat_id, data["photo"],
+            caption=f"""🎁 FREE SHAX
+
+📊 Rating: {data['rating']}
+
+🔗 Link:
+{BOT_LINK}{user['ref']}
+
+👥 {user['invited']}/20""")
+        return
+
+    if text == "📈 Shaxda Suuqa Maanta":
+        today = get_today_market()
+        if "photo_file_id" in today:
+            bot.send_photo(chat_id, today['photo_file_id'],
+                caption=f"📊 Rating: {today['rating']}\n💰 Price: ${today['price']}")
+        else:
+            bot.send_message(chat_id, "❌ Wali lama dhigin")
+        return
+
+    # =============================
     # USER RATING
+    # =============================
     if msg.content_type == "photo":
         manual_ratings[chat_id] = True
         bot.reply_to(msg, "Qor rating:")
         return
 
     if msg.content_type == "text" and chat_id in manual_ratings:
-        if not text.isdigit():
+
+        if not msg.text.isdigit():
             bot.send_message(chat_id, "❌ Geli number sax ah")
             return
 
-        rating = int(text)
+        rating = int(msg.text)
         price = get_price(rating)
 
         bot.send_message(chat_id,
-f"""🔥 QIIMEYN DHAMEYSTIRAN
+f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
 💰 Qiimaha: ${price}
 
-📢 Ka iibso:
+📢 Ka iibso shaxo 👇
 {WHATSAPP_LINK}
-""")
+""", parse_mode="Markdown")
+
         manual_ratings.pop(chat_id)
-        return
-
-    # ADMIN PANEL
-    if text == "🛠️ Admin Panel" and is_admin:
-        admin_panel(chat_id)
-        return
-
-    if text == "⬅️ Back":
-        main_menu(chat_id, is_admin)
-        return
-
-    # ADMIN ACTIONS
-    if is_admin:
-        if text == "📊 Stats":
-            bot.send_message(chat_id, f"Users: {get_total_users()}\nToday: {get_today_users()}")
-            return
-
-        if text == "❌ Delete Free Shax":
-            delete_free()
-            bot.send_message(chat_id, "Deleted")
-            return
-
-    # USER FEATURES
-    if text == "🎁 SHAXAHA FREE":
-        data = get_free()
-        if not data:
-            bot.send_message(chat_id, "❌ Free ma jiro")
-            return
-
-        bot.send_photo(chat_id, data["photo"],
-                       caption=f"Rating: {data['rating']}\nLink:\n{BOT_LINK}{user['ref']}")
-        return
-
-    if text == "📈 Shaxda Suuqa Maanta":
-        data = get_today_market()
-        if "photo_file_id" in data:
-            bot.send_photo(chat_id, data['photo_file_id'],
-                           caption=f"Rating: {data['rating']}\nPrice: ${data['price']}")
-        else:
-            bot.send_message(chat_id, "❌ lama dhigin")
         return
 
 # ==============================
