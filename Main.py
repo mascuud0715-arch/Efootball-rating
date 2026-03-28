@@ -50,7 +50,7 @@ def generate_ref():
         if not users_col.find_one({"ref": ref}):
             return ref
 
-def add_user(chat_id, username=None):
+def add_user(chat_id, username=None, invited_by=None):
     if not users_col.find_one({"chat_id": chat_id}):
         free = get_free()
         users_col.insert_one({
@@ -58,6 +58,7 @@ def add_user(chat_id, username=None):
             "username": username,
             "ref": generate_ref(),
             "invited": 0,
+            "invited_by": invited_by,  # 🔥 muhiim
             "round": free.get("round", 1),
             "date": datetime.utcnow().date().isoformat()
         })
@@ -141,33 +142,46 @@ def start(msg):
 
     args = msg.text.split()
 
-    if len(args) > 1:
-        try:
-            ref = int(args[1])
-            owner = users_col.find_one({"ref": ref})
+ref_owner = None
 
-            if owner and owner["chat_id"] != chat_id:
-                users_col.update_one(
-                    {"ref": ref},
-                    {"$inc": {"invited": 1}}
-                )
+if len(args) > 1:
+    try:
+        ref = int(args[1])
+        ref_owner = users_col.find_one({"ref": ref})
+    except:
+        pass
 
-                # soo qaado user updated
-                updated_user = users_col.find_one({"ref": ref})
-                invited = updated_user.get("invited", 0)
+# marka user la abuurayo
+add_user(chat_id, username, invited_by=ref_owner["chat_id"] if ref_owner else None)
+user = get_user(chat_id)
 
-                # marka uu gaaro 20
-                if invited == 20:
-                    try:
-                        bot.send_message(owner["chat_id"], """🎉 Hambalyo!
+# haddii uu jiro owner sax ah
+if ref_owner and ref_owner["chat_id"] != chat_id:
 
-Waxaad gaartay heerkii aad ku qaadan lahayd SHAX FREE 🆓
+    # hubi user-kan horey loo invite gareeyay
+    if user.get("invited_by") == ref_owner["chat_id"]:
 
-📩 Fadlan nala soo xiriir:
+        # kordhi invited HAL MAR KALIYA
+        users_col.update_one(
+            {"chat_id": ref_owner["chat_id"]},
+            {"$inc": {"invited": 1}}
+        )
+
+        # hubi 20
+        updated_owner = users_col.find_one({"chat_id": ref_owner["chat_id"]})
+        invited = updated_owner.get("invited", 0)
+
+        if invited == 20:
+            try:
+                bot.send_message(ref_owner["chat_id"], """🎉 Hambalyo!
+
+Waxaad gaartay 20 user 🎯
+
+📩 La xiriir:
 @Manager_efootball_shop
 """)
-                    except:
-                        pass
+            except:
+                pass
 
         except:
             pass
