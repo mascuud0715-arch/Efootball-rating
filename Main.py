@@ -181,6 +181,8 @@ def main_menu(chat_id, is_admin=False):
     if is_admin:
         markup.add("🛠️ Admin Panel")
 
+    bot.send_message(chat_id, "Dooro option 👇", reply_markup=markup)
+
 def admin_panel(chat_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(
