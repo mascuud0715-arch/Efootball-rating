@@ -330,37 +330,42 @@ def handle(msg):
             bot.send_message(chat_id, "❌ Wali lama dhigin")
         return
         
-    # ==============================
-    # USER RATING
-    # ==============================
-        if chat_id in admin_state:
+# ==============================
+# USER RATING
+# ==============================
+
+# Haddii admin state jiro → iska dhaaf user rating
+if chat_id in admin_state:
+    return
+
+# Haddii user sawir soo diro
+if msg.content_type == "photo":
+    manual_ratings[chat_id] = True
+    bot.reply_to(msg, "Qor rating:")
+    return
+
+# Haddii user rating soo qoro
+if chat_id in manual_ratings and msg.content_type == "text":
+
+    if not text or not text.isdigit():
+        bot.send_message(chat_id, "❌ Fadlan number sax ah geli")
         return
 
-    if msg.content_type == "photo":
-        manual_ratings[chat_id] = True
-        bot.reply_to(msg, "Qor rating:")
-        return
+    rating = int(text)
+    price = get_price(rating)
 
-    if chat_id in manual_ratings and msg.content_type == "text":
+    bot.send_message(chat_id,
+f"""🔥 QIIMEYN DHAMEYSTIRAN 🔥
 
-        if not text.isdigit():
-            bot.send_message(chat_id, "Number sax ah geli")
-            return
+📊 Rating: {rating}
+💰 Qiimaha: ${price}
 
-        rating = int(text)
-        price = get_price(rating)
-
-        bot.send_message(chat_id,
-f"""🔥 QIIMEYN 🔥
-
-Rating: {rating}
-Qiimaha: ${price}
-
+📢 Ka iibso:
 {WHATSAPP_LINK}
 """)
 
-        manual_ratings.pop(chat_id)
-        return
+    manual_ratings.pop(chat_id)
+    return
 
 # ==============================
 # RUN
