@@ -402,52 +402,106 @@ Markaad dirtid qor: Confirm
         return
 
     if text == "📈 Shaxda Suuqa Maanta":
-        today = get_today_market()
-        if "photo_file_id" in today:
-            bot.send_photo(chat_id, today['photo_file_id'],
-            caption=f"📊 Rating: {today['rating']}\n💰 Price: ${today['price']}")
-        else:
-            bot.send_message(chat_id, "❌ Wali lama dhigin")
-        return
+    today = get_today_market()
 
-    # ==============================
+    if "photo_file_id" in today:
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("🛒 IIBSO", callback_data="buy"))
+
+        bot.send_photo(
+            chat_id,
+            today['photo_file_id'],
+            caption=f"📊 Rating: {today['rating']}\n💰 Price: ${today['price']}",
+            reply_markup=markup
+        )
+    else:
+        bot.send_message(chat_id, "❌ Wali lama dhigin")
+    return
+
+    # ===============================
     # USER RATING
+    # ===============================
+
+@bot.callback_query_handler(func=lambda call: True)
+def callbacks(call):
+    chat_id = call.message.chat.id
+    data = call.data
+
+    # ==============================
+    # BUY BUTTON
     # ==============================
 
-    if chat_id in admin_state:
-        return
+    if data == "buy":
+        today = get_today_market()
 
-    if msg.content_type == "photo":
-        manual_ratings[chat_id] = True
-        bot.reply_to(msg, "📊 Fadlan qor rating-ka:")
-        return
-
-    if chat_id in manual_ratings and msg.content_type == "text":
-
-        if not text or not text.isdigit():
-            bot.send_message(chat_id, "❌ Fadlan number sax ah geli")
+        if not today:
+            bot.answer_callback_query(call.id, "❌ Suuq ma jiro")
             return
 
-        rating = int(text)
-        price = get_price(rating)
+        price = today['price']
+        fee = 1
+        total = price + fee
 
-        if price == 0:
-            bot.send_message(chat_id, "❌ Rating-kan lama qiimeyn karo")
-            manual_ratings.pop(chat_id)
-            return
+        pending_buy[chat_id] = {
+            "price": price,
+            "total": total
+        }
+
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("✅ CONFIRM", callback_data="buy_confirm"))
 
         bot.send_message(chat_id, f"""
-🔥 QIIMEYN DHAMEYSTIRAN 🔥
+📊 SHAXDA SUUQA
 
-📊 Rating: {rating}
-💰 Qiimaha: ${price}
+💰 Price: ${price}
+📦 Fee: ${fee}
+🧾 Total: ${total}
 
-📢 Ka iibso:
-{WHATSAPP_LINK}
-""")
+📲 Ku dir lacag:
++252907868526
+""", reply_markup=markup)
 
-        manual_ratings.pop(chat_id)
-        return
+    # ==============================
+    # USER CONFIRM BUY
+    # ==============================
+
+    if data == "buy_confirm":
+        markup = InlineKeyboardMarkup()
+        markup.add(
+            InlineKeyboardButton("✅ Confirm", callback_data=f"buy_ok_{chat_id}"),
+            InlineKeyboardButton("❌ Reject", callback_data=f"buy_no_{chat_id}")
+        )
+
+        bot.send_message(chat_id, "⏳ Sug xaqijinta admin...")
+
+        bot.send_message(
+            ADMIN_ID,
+            f"""
+🛒 BUY REQUEST
+
+👤 User: {chat_id}
+💰 Total: ${pending_buy[chat_id]['total']}
+""",
+            reply_markup=markup
+        )
+
+    # ==============================
+    # ADMIN CONFIRM BUY
+    # ==============================
+
+    if data.startswith("buy_ok_"):
+        uid = int(data.split("_")[2])
+
+        bot.send_message(uid, "✅ Iibka waa la xaqiijiyay")
+
+        pending_buy.pop(uid, None)
+
+    if data.startswith("buy_no_"):
+        uid = int(data.split("_")[2])
+
+        bot.send_message(uid, "❌ Iibka waa la diiday")
+
+        pending_buy.pop(uid, None)
 
 # ==============================
 # RUN
