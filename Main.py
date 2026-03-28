@@ -333,17 +333,24 @@ def handle(msg):
     # =============================
     # USER RATING
     # =============================
-    if msg.content_type == 'photo':
-        bot.reply_to(msg, "Qor rating:")
+
+    # Haddii sawir cusub la soo diro (ONLY haddii admin state jirin)
+    if msg.content_type == 'photo' and chat_id not in admin_state:
         manual_ratings[chat_id] = True
+        bot.reply_to(msg, "Qor rating:")
         return
 
-    if chat_id in manual_ratings:
-        try:
-            rating = int(msg.text)
-            price = get_price(rating)
+    # Haddii user hore sawir u diray kadib rating qorayo
+    if chat_id in manual_ratings and msg.content_type == 'text':
 
-            bot.send_message(chat_id,
+        if not msg.text.isdigit():
+            bot.send_message(chat_id, "❌ Geli number sax ah")
+            return
+
+        rating = int(msg.text)
+        price = get_price(rating)
+
+        bot.send_message(chat_id,
 f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
@@ -353,9 +360,7 @@ f"""🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 {WHATSAPP_LINK}
 """, parse_mode="Markdown")
 
-            manual_ratings.pop(chat_id)
-        except:
-            bot.send_message(chat_id, "❌ Error")
+        manual_ratings.pop(chat_id)
         return
 
 # ==============================
