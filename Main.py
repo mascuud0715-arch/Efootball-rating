@@ -181,8 +181,6 @@ def main_menu(chat_id, is_admin=False):
     if is_admin:
         markup.add("🛠️ Admin Panel")
 
-    bot.send_message(chat_id, "Dooro option 👇", reply_markup=markup)
-
 def admin_panel(chat_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(
@@ -402,106 +400,52 @@ Markaad dirtid qor: Confirm
         return
 
     if text == "📈 Shaxda Suuqa Maanta":
-    today = get_today_market()
-
-    if "photo_file_id" in today:
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("🛒 IIBSO", callback_data="buy"))
-
-        bot.send_photo(
-            chat_id,
-            today['photo_file_id'],
-            caption=f"📊 Rating: {today['rating']}\n💰 Price: ${today['price']}",
-            reply_markup=markup
-        )
-    else:
-        bot.send_message(chat_id, "❌ Wali lama dhigin")
-    return
-
-    # ===============================
-    # USER RATING
-    # ===============================
-
-@bot.callback_query_handler(func=lambda call: True)
-def callbacks(call):
-    chat_id = call.message.chat.id
-    data = call.data
-
-    # ==============================
-    # BUY BUTTON
-    # ==============================
-
-    if data == "buy":
         today = get_today_market()
+        if "photo_file_id" in today:
+            bot.send_photo(chat_id, today['photo_file_id'],
+            caption=f"📊 Rating: {today['rating']}\n💰 Price: ${today['price']}")
+        else:
+            bot.send_message(chat_id, "❌ Wali lama dhigin")
+        return
 
-        if not today:
-            bot.answer_callback_query(call.id, "❌ Suuq ma jiro")
+    # ==============================
+    # USER RATING
+    # ==============================
+
+    if chat_id in admin_state:
+        return
+
+    if msg.content_type == "photo":
+        manual_ratings[chat_id] = True
+        bot.reply_to(msg, "📊 Fadlan qor rating-ka:")
+        return
+
+    if chat_id in manual_ratings and msg.content_type == "text":
+
+        if not text or not text.isdigit():
+            bot.send_message(chat_id, "❌ Fadlan number sax ah geli")
             return
 
-        price = today['price']
-        fee = 1
-        total = price + fee
+        rating = int(text)
+        price = get_price(rating)
 
-        pending_buy[chat_id] = {
-            "price": price,
-            "total": total
-        }
-
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ CONFIRM", callback_data="buy_confirm"))
+        if price == 0:
+            bot.send_message(chat_id, "❌ Rating-kan lama qiimeyn karo")
+            manual_ratings.pop(chat_id)
+            return
 
         bot.send_message(chat_id, f"""
-📊 SHAXDA SUUQA
+🔥 QIIMEYN DHAMEYSTIRAN 🔥
 
-💰 Price: ${price}
-📦 Fee: ${fee}
-🧾 Total: ${total}
+📊 Rating: {rating}
+💰 Qiimaha: ${price}
 
-📲 Ku dir lacag:
-+252907868526
-""", reply_markup=markup)
+📢 Ka iibso:
+{WHATSAPP_LINK}
+""")
 
-    # ==============================
-    # USER CONFIRM BUY
-    # ==============================
-
-    if data == "buy_confirm":
-        markup = InlineKeyboardMarkup()
-        markup.add(
-            InlineKeyboardButton("✅ Confirm", callback_data=f"buy_ok_{chat_id}"),
-            InlineKeyboardButton("❌ Reject", callback_data=f"buy_no_{chat_id}")
-        )
-
-        bot.send_message(chat_id, "⏳ Sug xaqijinta admin...")
-
-        bot.send_message(
-            ADMIN_ID,
-            f"""
-🛒 BUY REQUEST
-
-👤 User: {chat_id}
-💰 Total: ${pending_buy[chat_id]['total']}
-""",
-            reply_markup=markup
-        )
-
-    # ==============================
-    # ADMIN CONFIRM BUY
-    # ==============================
-
-    if data.startswith("buy_ok_"):
-        uid = int(data.split("_")[2])
-
-        bot.send_message(uid, "✅ Iibka waa la xaqiijiyay")
-
-        pending_buy.pop(uid, None)
-
-    if data.startswith("buy_no_"):
-        uid = int(data.split("_")[2])
-
-        bot.send_message(uid, "❌ Iibka waa la diiday")
-
-        pending_buy.pop(uid, None)
+        manual_ratings.pop(chat_id)
+        return
 
 # ==============================
 # RUN
