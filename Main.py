@@ -334,42 +334,47 @@ def handle(msg):
         return
 
 
-    # =============================
-    # USER RATING
-    # =============================
+# =============================
+# USER RATING (FIXED)
+# =============================
 
-    # Haddii admin state jiro → skip
-    if chat_id in admin_state:
+# Haddii admin state jiro → ha galin rating system
+if chat_id in admin_state:
+    return
+
+# USER sawir soo diro
+if msg.content_type == "photo":
+    manual_ratings[chat_id] = True
+    bot.reply_to(msg, "📊 Fadlan qor rating-ka:")
+    return
+
+# USER rating soo diro
+if chat_id in manual_ratings and msg.content_type == "text":
+
+    if not msg.text.isdigit():
+        bot.send_message(chat_id, "❌ Number sax ah geli")
         return
 
-    # Sawir la soo diro
-    if msg.content_type == "photo":
-        manual_ratings[chat_id] = True
-        bot.reply_to(msg, "Qor rating:")
+    rating = int(msg.text)
+    price = get_price(rating)
+
+    if price == 0:
+        bot.send_message(chat_id, "❌ Rating-kan lama qiimeyn karo")
+        manual_ratings.pop(chat_id)
         return
 
-    # Rating la soo qoro
-    if chat_id in manual_ratings and msg.content_type == "text":
-
-        if not text or not text.isdigit():
-            bot.send_message(chat_id, "❌ Fadlan number sax ah geli")
-            return
-
-        rating = int(text)
-        price = get_price(rating)
-
-        bot.send_message(chat_id,
-f"""🔥 QIIMEYN DHAMEYSTIRAN 🔥
+    bot.send_message(chat_id, f"""
+🔥 **QIIMEYN DHAMEYSTIRAN** 🔥
 
 📊 Rating: {rating}
 💰 Qiimaha: ${price}
 
 📢 Ka iibso:
 {WHATSAPP_LINK}
-""")
+""", parse_mode="Markdown")
 
-        manual_ratings.pop(chat_id)
-        return
+    manual_ratings.pop(chat_id)
+    return
         
 # ==============================
 # USER RATING
