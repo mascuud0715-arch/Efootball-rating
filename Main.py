@@ -52,11 +52,13 @@ def generate_ref():
 
 def add_user(chat_id, username=None):
     if not users_col.find_one({"chat_id": chat_id}):
+        free = get_free()
         users_col.insert_one({
             "chat_id": chat_id,
             "username": username,
             "ref": generate_ref(),
             "invited": 0,
+            "round": free.get("round", 1),
             "date": datetime.utcnow().date().isoformat()
         })
 
@@ -68,13 +70,28 @@ def get_user(chat_id):
 # ==============================
 def set_free(photo, rating):
     free_col.delete_many({})
-    free_col.insert_one({"photo": photo, "rating": rating})
+
+    # kordhi round
+    last = free_col.find_one(sort=[("round", -1)])
+    new_round = (last["round"] + 1) if last else 1
+
+    free_col.insert_one({
+        "photo": photo,
+        "rating": rating,
+        "round": new_round
+    })
+
+    # RESET invited dhammaan users
+    users_col.update_many({}, {"$set": {"invited": 0}})
 
 def get_free():
     return free_col.find_one() or {}
 
 def delete_free():
     free_col.delete_many({})
+
+    # reset invited
+    users_col.update_many({}, {"$set": {"invited": 0}})
 
 # ==============================
 # MARKET
@@ -338,7 +355,7 @@ def handle(msg):
 👥 {user['invited']}/20""")
         return
 
-    bot.send_message(chat_id, """Hadii Aad linkigagas ku kento 20 user waxad hele shaxdas""", reply_markup=markup)
+    bot.send_message(chat_id, "Hadii aad 20 user keento waxaad helaysaa shax free 🎁")
 
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
