@@ -321,6 +321,9 @@ def handle(msg):
 👥 {user['invited']}/20""")
         return
 
+    # =============================
+    # USER FEATURES
+    # =============================
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
         if "photo_file_id" in today:
@@ -328,6 +331,44 @@ def handle(msg):
                 caption=f"📊 Rating: {today['rating']}\n💰 Price: ${today['price']}")
         else:
             bot.send_message(chat_id, "❌ Wali lama dhigin")
+        return
+
+
+    # =============================
+    # USER RATING
+    # =============================
+
+    # Haddii admin state jiro → skip
+    if chat_id in admin_state:
+        return
+
+    # Sawir la soo diro
+    if msg.content_type == "photo":
+        manual_ratings[chat_id] = True
+        bot.reply_to(msg, "Qor rating:")
+        return
+
+    # Rating la soo qoro
+    if chat_id in manual_ratings and msg.content_type == "text":
+
+        if not text or not text.isdigit():
+            bot.send_message(chat_id, "❌ Fadlan number sax ah geli")
+            return
+
+        rating = int(text)
+        price = get_price(rating)
+
+        bot.send_message(chat_id,
+f"""🔥 QIIMEYN DHAMEYSTIRAN 🔥
+
+📊 Rating: {rating}
+💰 Qiimaha: ${price}
+
+📢 Ka iibso:
+{WHATSAPP_LINK}
+""")
+
+        manual_ratings.pop(chat_id)
         return
         
 # ==============================
@@ -339,33 +380,7 @@ if chat_id in admin_state:
     return
 
 # Haddii user sawir soo diro
-if msg.content_type == "photo":
-    manual_ratings[chat_id] = True
-    bot.reply_to(msg, "Qor rating:")
-    return
-
-# Haddii user rating soo qoro
-if chat_id in manual_ratings and msg.content_type == "text":
-
-    if not text or not text.isdigit():
-        bot.send_message(chat_id, "❌ Fadlan number sax ah geli")
-        return
-
-    rating = int(text)
-    price = get_price(rating)
-
-    bot.send_message(chat_id,
-f"""🔥 QIIMEYN DHAMEYSTIRAN 🔥
-
-📊 Rating: {rating}
-💰 Qiimaha: ${price}
-
-📢 Ka iibso:
-{WHATSAPP_LINK}
-""")
-
-    manual_ratings.pop(chat_id)
-    return
+if ms
 
 # ==============================
 # RUN
