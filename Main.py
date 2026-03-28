@@ -13,7 +13,7 @@ bot = telebot.TeleBot(TOKEN)
 
 WHATSAPP_LINK = "https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"
 
-ADMIN_ID = 8669162116  # 🔥 KU BEDDEL ID-GAAGA
+ADMIN_ID = 8669162116
 
 BOT_LINK = "https://t.me/Efootball_seller_bot?start="
 
@@ -175,9 +175,7 @@ def handle(msg):
         add_user(chat_id)
         user = get_user(chat_id)
 
-    # =============================
     # ADMIN PANEL
-    # =============================
     if text == "🛠️ Admin Panel" and is_admin:
         admin_panel(chat_id)
         return
@@ -233,9 +231,7 @@ def handle(msg):
             admin_state[chat_id] = "video"
             return
 
-    # =============================
     # STATES
-    # =============================
     state = admin_state.get(chat_id)
 
     if state == "check":
@@ -301,9 +297,7 @@ def handle(msg):
         admin_state.pop(chat_id)
         return
 
-    # =============================
     # USER FEATURES
-    # =============================
     if text == "🎁 SHAXAHA FREE":
         data = get_free()
         if not data:
@@ -321,9 +315,6 @@ def handle(msg):
 👥 {user['invited']}/20""")
         return
 
-    # =============================
-    # USER FEATURES
-    # =============================
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
         if "photo_file_id" in today:
@@ -333,21 +324,15 @@ def handle(msg):
             bot.send_message(chat_id, "❌ Wali lama dhigin")
         return
 
-    # =============================
-    # USER RATING (FINAL FIX)
-    # =============================
-
-    # Haddii admin state jiro → skip
+    # USER RATING
     if chat_id in admin_state:
         return
 
-    # User sawir soo diro
     if msg.content_type == "photo":
         manual_ratings[chat_id] = True
         bot.reply_to(msg, "📊 Fadlan qor rating-ka:")
         return
 
-    # User rating soo diro
     if chat_id in manual_ratings and msg.content_type == "text":
 
         if not text or not text.isdigit():
@@ -374,18 +359,6 @@ def handle(msg):
 
         manual_ratings.pop(chat_id)
         return
-
-        
-# ==============================
-# USER RATING
-# ==============================
-
-# Haddii admin state jiro → iska dhaaf user rating
-if chat_id in admin_state:
-    return
-
-# Haddii user sawir soo diro
-if ms
 
 # ==============================
 # RUN
