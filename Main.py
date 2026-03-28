@@ -128,7 +128,24 @@ def start(msg):
             ref = int(args[1])
             owner = users_col.find_one({"ref": ref})
             if owner and owner["chat_id"] != chat_id:
-                users_col.update_one({"ref": ref}, {"$inc": {"invited": 1}})
+    users_col.update_one({"ref": ref}, {"$inc": {"invited": 1}})
+
+    # soo qaado user-ka updated
+    updated_user = users_col.find_one({"ref": ref})
+
+    invited = updated_user.get("invited", 0)
+
+    # marka uu gaaro 20
+    if invited == 20:
+        try:
+            bot.send_message(owner["chat_id"], """
+🎉 Hambalyo!
+
+Waxaad gaartay heerkii aad ku qaadan lahayd SHAX FREE 🆓
+
+📩 Fadlan nala soo xiriir:
+@Manager_efootball_shop
+""")
         except:
             pass
 
