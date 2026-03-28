@@ -367,8 +367,6 @@ def handle(msg):
 👥 {user['invited']}/20""")
         return
 
-    bot.send_message(chat_id, "Hadii aad 20 user keento waxaad helaysaa shax free 🎁")
-
     if text == "📈 Shaxda Suuqa Maanta":
         today = get_today_market()
         if "photo_file_id" in today:
