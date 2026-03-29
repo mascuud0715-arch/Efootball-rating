@@ -344,4 +344,3 @@ def callbacks(call):
 # ======================
 
 print("Market Bot Running...")
-bot.infinity_polling()
