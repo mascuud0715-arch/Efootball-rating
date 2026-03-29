@@ -416,4 +416,3 @@ def handle(msg):
 # RUN
 # ==============================
 print("Bot running...")
-bot.infinity_polling()
