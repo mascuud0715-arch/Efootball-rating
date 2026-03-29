@@ -44,6 +44,7 @@ def admin_panel(chat_id):
     markup.add(
         "➕ DHIG SHAX",
         "❌ DELETE SHAXAHA DHAN",
+        "📢 BROADCAST",
         "🔙 BACK"
     )
     bot.send_message(chat_id, "🛠️ Admin Panel", reply_markup=markup)
@@ -89,7 +90,7 @@ def show_market(chat_id, index):
 
 
 # ======================
-# MAIN HANDLER (HAL KALIYA)
+# MAIN HANDLER (FIXED)
 # ======================
 
 @bot.message_handler(content_types=['text', 'photo', 'video'])
@@ -131,7 +132,7 @@ def handle(msg):
 
         if text == "➕ DHIG SHAX":
             admin_state[chat_id] = {"step": "photo"}
-            bot.send_message(chat_id, "📸 Dir sawir")
+            bot.send_message(chat_id, "📸 Dir sawirka shaxda")
             return
 
         if text == "❌ DELETE SHAXAHA DHAN":
@@ -139,8 +140,14 @@ def handle(msg):
             bot.send_message(chat_id, "✅ Waa la tirtiray")
             return
 
+        if text == "📢 BROADCAST":
+            admin_state[chat_id] = {"step": "broadcast"}
+            bot.send_message(chat_id, "Qor fariin:")
+            return
+
     # ========= ADMIN FLOW =========
     state = admin_state.get(chat_id)
+
     if state:
         if state["step"] == "photo" and msg.content_type == "photo":
             state["photo"] = msg.photo[-1].file_id
@@ -153,7 +160,12 @@ def handle(msg):
                 "photo": state["photo"],
                 "price": text
             })
-            bot.send_message(chat_id, "✅ Waa la dhigay")
+            bot.send_message(chat_id, "✅ Shax waa la dhigay")
+            admin_state.pop(chat_id)
+            return
+
+        if state["step"] == "broadcast":
+            bot.send_message(chat_id, "✅ Broadcast la diray")
             admin_state.pop(chat_id)
             return
 
@@ -165,7 +177,7 @@ def handle(msg):
     # ========= SELL =========
     if text == "📤 ISKA IIBI":
         sell_state[chat_id] = {"step": "media"}
-        bot.send_message(chat_id, "📸/🎥 Soo dir sawir ama video")
+        bot.send_message(chat_id, "📸/🎥 Soo dir sawir ama video shaxdaada")
         return
 
     state = sell_state.get(chat_id)
@@ -198,6 +210,24 @@ def handle(msg):
 
         if state["step"] == "price":
             state["price"] = text
+            state["step"] = "gmail"
+            bot.send_message(chat_id, "📧 Qor Gmail")
+            return
+
+        if state["step"] == "gmail":
+            state["gmail"] = text
+            state["step"] = "password"
+            bot.send_message(chat_id, "🔑 Qor Password")
+            return
+
+        if state["step"] == "password":
+            state["password"] = text
+            state["step"] = "number"
+            bot.send_message(chat_id, "📲 Qor number lacagta Laguugu so diro")
+            return
+
+        if state["step"] == "number":
+            state["number"] = text
 
             caption = f"""
 📤 CODSI IIBIN
@@ -205,6 +235,9 @@ def handle(msg):
 👤 @{msg.from_user.username}
 📊 Rating: {state['rating']}
 💰 Price: ${state['price']}
+📧 {state['gmail']}
+🔑 {state['password']}
+📲 {state['number']}
 🆔 {chat_id}
 """
 
@@ -219,7 +252,7 @@ def handle(msg):
             else:
                 bot.send_video(ADMIN_ID, state["media"], caption=caption, reply_markup=markup)
 
-            bot.send_message(chat_id, "⏳ Sug admin...")
+            bot.send_message(chat_id, f"⏳ Sug admin\n{SUPPORT}")
             sell_state.pop(chat_id)
             return
 
@@ -244,7 +277,7 @@ def callbacks(call):
         pending_buy[chat_id] = item
 
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("✅ WAAN DIRAY", callback_data="confirm_buy"))
+        markup.add(InlineKeyboardButton("✅ CONFIRM", callback_data="confirm_buy"))
 
         bot.send_message(chat_id, f"💰 ${item['price']}\n📲 {PAY_NUMBER}", reply_markup=markup)
         return
@@ -254,10 +287,10 @@ def callbacks(call):
         return
 
     if data.startswith("buy_ok_"):
-        bot.send_message(int(data.split("_")[2]), "✅ Lacag waa la xaqiijiyay")
+        bot.send_message(int(data.split("_")[2]), "✅ Waa la xaqiijiyay")
 
     if data.startswith("buy_no_"):
-        bot.send_message(int(data.split("_")[2]), "❌ Lacag lama helin")
+        bot.send_message(int(data.split("_")[2]), "❌ Waa la diiday")
 
     if data.startswith("sell_ok_"):
         bot.send_message(int(data.split("_")[2]), "✅ Waa la aqbalay")
