@@ -167,6 +167,7 @@ def handle(msg):
         return
 
     # ========= ADMIN =========
+    # ========= ADMIN =========
     if text == "🛠️ Admin Panel" and is_admin:
         admin_panel(chat_id)
         return
@@ -177,9 +178,9 @@ def handle(msg):
             return
 
         if text == "➕ DHIG SHAX":
-    admin_state[chat_id] = {"step": "photo"}
-    bot.send_message(chat_id, "📸 Dir sawir")
-    return
+            admin_state[chat_id] = {"step": "photo"}
+            bot.send_message(chat_id, "📸 Dir sawir")
+            return
 
         if text == "❌ DELETE SHAXAHA DHAN":
             market_col.delete_many({})
@@ -204,49 +205,49 @@ def handle(msg):
         admin_state.pop(chat_id)
         return
 
-    # ========= ADMIN ADD SHAX (FIXED) =========
-state = admin_state.get(chat_id)
+    # ========= ADMIN ADD SHAX (FIXED + LIMIT 10) =========
+    state = admin_state.get(chat_id)
 
-if state:
+    if state:
 
-    # STEP 1: PHOTO
-    if state["step"] == "photo":
-        if msg.content_type != "photo":
-            bot.send_message(chat_id, "❌ Fadlan sawir soo dir")
+        # STEP 1: PHOTO
+        if state["step"] == "photo":
+            if msg.content_type != "photo":
+                bot.send_message(chat_id, "❌ Fadlan sawir soo dir")
+                return
+
+            # LIMIT 10 SHAX
+            total = market_col.count_documents({})
+            if total >= 10:
+                bot.send_message(chat_id, "❌ Waxaad gaartay limit-ka 10 shax")
+                admin_state.pop(chat_id)
+                return
+
+            state["photo"] = msg.photo[-1].file_id
+            state["step"] = "price"
+            bot.send_message(chat_id, "💰 Qor qiimaha")
             return
 
-        # LIMIT 10 SHAX
-        total = market_col.count_documents({})
-        if total >= 10:
-            bot.send_message(chat_id, "❌ Waxaad gaartay limit-ka 10 shax")
+        # STEP 2: PRICE
+        if state["step"] == "price":
+            if not text:
+                bot.send_message(chat_id, "❌ Qiime geli")
+                return
+
+            try:
+                float(text)
+            except:
+                bot.send_message(chat_id, "❌ Qiime sax ah geli")
+                return
+
+            market_col.insert_one({
+                "photo": state["photo"],
+                "price": text
+            })
+
+            bot.send_message(chat_id, "✅ Shax waa la dhigay suuqa")
             admin_state.pop(chat_id)
             return
-
-        state["photo"] = msg.photo[-1].file_id
-        state["step"] = "price"
-        bot.send_message(chat_id, "💰 Qor qiimaha")
-        return
-
-    # STEP 2: PRICE
-    if state["step"] == "price":
-        if not text:
-            bot.send_message(chat_id, "❌ Qiime geli")
-            return
-
-        try:
-            float(text)
-        except:
-            bot.send_message(chat_id, "❌ Qiime sax ah geli")
-            return
-
-        market_col.insert_one({
-            "photo": state["photo"],
-            "price": text
-        })
-
-        bot.send_message(chat_id, "✅ Shax waa la dhigay suuqa")
-        admin_state.pop(chat_id)
-        return
 
     # ========= BUY =========
     if text == "🛒 IIBSO":
