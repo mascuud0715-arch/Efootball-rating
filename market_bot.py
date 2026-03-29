@@ -44,10 +44,10 @@ def admin_panel(chat_id):
     markup.add(
         "➕ DHIG SHAX",
         "❌ DELETE SHAXAHA DHAN",
-        "📢 BROADCAST",
         "🔙 BACK"
     )
     bot.send_message(chat_id, "🛠️ Admin Panel", reply_markup=markup)
+
 
 # ======================
 # START
@@ -55,8 +55,8 @@ def admin_panel(chat_id):
 
 @bot.message_handler(commands=['start'])
 def start(msg):
-    is_admin = (msg.from_user.id == ADMIN_ID)
-    main_menu(msg.chat.id, is_admin)
+    main_menu(msg.chat.id, msg.from_user.id == ADMIN_ID)
+
 
 # ======================
 # SHOW MARKET
@@ -87,8 +87,9 @@ def show_market(chat_id, index):
         reply_markup=markup
     )
 
+
 # ======================
-# MAIN HANDLER (MUHIIM)
+# MAIN HANDLER (HAL KALIYA)
 # ======================
 
 @bot.message_handler(content_types=['text', 'photo', 'video'])
@@ -97,21 +98,40 @@ def handle(msg):
     text = msg.text if msg.content_type == "text" else None
     is_admin = (msg.from_user.id == ADMIN_ID)
 
-    # ========= ADMIN =========
+    # ========= BUY SCREENSHOT =========
+    if msg.content_type == "photo" and chat_id in pending_buy:
+        item = pending_buy[chat_id]
 
+        markup = InlineKeyboardMarkup()
+        markup.add(
+            InlineKeyboardButton("✅ CONFIRM", callback_data=f"buy_ok_{chat_id}"),
+            InlineKeyboardButton("❌ REJECT", callback_data=f"buy_no_{chat_id}")
+        )
+
+        bot.send_photo(
+            ADMIN_ID,
+            msg.photo[-1].file_id,
+            caption=f"🛒 BUY\nUser:{chat_id}\nPrice:${item['price']}",
+            reply_markup=markup
+        )
+
+        bot.send_message(chat_id, "⏳ Sug admin")
+        pending_buy.pop(chat_id)
+        return
+
+    # ========= ADMIN =========
     if text == "🛠️ Admin Panel" and is_admin:
         admin_panel(chat_id)
         return
 
     if is_admin:
-
         if text == "🔙 BACK":
             main_menu(chat_id, True)
             return
 
         if text == "➕ DHIG SHAX":
             admin_state[chat_id] = {"step": "photo"}
-            bot.send_message(chat_id, "📸 Dir sawirka")
+            bot.send_message(chat_id, "📸 Dir sawir")
             return
 
         if text == "❌ DELETE SHAXAHA DHAN":
@@ -120,9 +140,7 @@ def handle(msg):
             return
 
     # ========= ADMIN FLOW =========
-
     state = admin_state.get(chat_id)
-
     if state:
         if state["step"] == "photo" and msg.content_type == "photo":
             state["photo"] = msg.photo[-1].file_id
@@ -135,25 +153,21 @@ def handle(msg):
                 "photo": state["photo"],
                 "price": text
             })
-
-            bot.send_message(chat_id, "✅ Shax waa la dhigay")
+            bot.send_message(chat_id, "✅ Waa la dhigay")
             admin_state.pop(chat_id)
             return
 
     # ========= BUY =========
-
     if text == "🛒 IIBSO":
         show_market(chat_id, 0)
         return
 
     # ========= SELL =========
-
     if text == "📤 ISKA IIBI":
         sell_state[chat_id] = {"step": "media"}
         bot.send_message(chat_id, "📸/🎥 Soo dir sawir ama video")
         return
 
-    # SELL FLOW
     state = sell_state.get(chat_id)
 
     if state:
@@ -184,7 +198,6 @@ def handle(msg):
 
         if state["step"] == "price":
             state["price"] = text
-            state["step"] = "done"
 
             caption = f"""
 📤 CODSI IIBIN
@@ -210,33 +223,6 @@ def handle(msg):
             sell_state.pop(chat_id)
             return
 
-# ======================
-# PHOTO BUY (MUHIIM FIX)
-# ======================
-
-@bot.message_handler(content_types=['photo'])
-def photo_buy(msg):
-    chat_id = msg.chat.id
-
-    if chat_id in pending_buy:
-        item = pending_buy[chat_id]
-
-        markup = InlineKeyboardMarkup()
-        markup.add(
-            InlineKeyboardButton("✅ CONFIRM", callback_data=f"buy_ok_{chat_id}"),
-            InlineKeyboardButton("❌ REJECT", callback_data=f"buy_no_{chat_id}")
-        )
-
-        bot.send_photo(
-            ADMIN_ID,
-            msg.photo[-1].file_id,
-            caption=f"🛒 BUY\nUser:{chat_id}\nPrice:${item['price']}",
-            reply_markup=markup
-        )
-
-        bot.send_message(chat_id, "⏳ Sug admin")
-        pending_buy.pop(chat_id)  # muhiim fix
-        return
 
 # ======================
 # CALLBACKS
@@ -260,37 +246,25 @@ def callbacks(call):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("✅ WAAN DIRAY", callback_data="confirm_buy"))
 
-        bot.send_message(chat_id, f"""
-💰 ${item['price']}
-📲 {PAY_NUMBER}
-""", reply_markup=markup)
+        bot.send_message(chat_id, f"💰 ${item['price']}\n📲 {PAY_NUMBER}", reply_markup=markup)
         return
 
     if data == "confirm_buy":
         bot.send_message(chat_id, "📸 Soo dir screenshot")
         return
 
-    # ADMIN BUY
     if data.startswith("buy_ok_"):
-        uid = int(data.split("_")[2])
-        bot.send_message(uid, "✅ Lacag waa la xaqiijiyay")
-        return
+        bot.send_message(int(data.split("_")[2]), "✅ Lacag waa la xaqiijiyay")
 
     if data.startswith("buy_no_"):
-        uid = int(data.split("_")[2])
-        bot.send_message(uid, "❌ Lacag lama helin")
-        return
+        bot.send_message(int(data.split("_")[2]), "❌ Lacag lama helin")
 
-    # ADMIN SELL
     if data.startswith("sell_ok_"):
-        uid = int(data.split("_")[2])
-        bot.send_message(uid, "✅ Shaxda waa la aqbalay")
-        return
+        bot.send_message(int(data.split("_")[2]), "✅ Waa la aqbalay")
 
     if data.startswith("sell_no_"):
-        uid = int(data.split("_")[2])
-        bot.send_message(uid, "❌ Codsiga waa la diiday")
-        return
+        bot.send_message(int(data.split("_")[2]), "❌ Waa la diiday")
+
 
 # ======================
 # RUN
