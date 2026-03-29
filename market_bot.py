@@ -94,7 +94,7 @@ def show_market(chat_id, index):
 # MAIN HANDLER
 # ======================
 
-@bot.message_handler(content_types=['text', 'photo', 'video'])
+@bot.message_handler(content_types=['text'])
 def handle(msg):
     chat_id = msg.chat.id
     text = msg.text if msg.content_type == "text" else None
