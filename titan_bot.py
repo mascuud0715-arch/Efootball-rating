@@ -8,7 +8,7 @@ import hashlib
 # CONFIG
 # ======================
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN_3")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 PAY_NUMBERS = "+252677868526\n+252907868526"
