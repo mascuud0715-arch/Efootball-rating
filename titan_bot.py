@@ -98,6 +98,19 @@ def start(message):
     bot.send_message(message.chat.id, "Ku soo dhawoow Titan Market Bot 🤝", reply_markup=main_menu(message.from_user.id))
 
 # ======================
+# IIBSO BUTTON
+# ======================
+
+@bot.message_handler(func=lambda m: m.text == "🛒 IIBSO")
+def iibso(message):
+    bot.send_message(
+        message.chat.id,
+       """📸 Fadlan soo dir sawirka shaxda aad rabto inaad iibsato
+       From 👇
+       https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t"""
+    )
+
+# ======================
 # ADMIN PANEL
 # ======================
 
