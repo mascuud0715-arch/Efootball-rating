@@ -61,7 +61,15 @@ def start(message):
         {"$set": {"id": message.from_user.id}},
         upsert=True
     )
-    bot.send_message(message.chat.id, "Ku soo dhawoow 🤝", reply_markup=main_menu())
+    bot.send_message(message.chat.id, """Ku soo dhawoow Titan Market Bot 
+    HalKaan waxaad Ka heli kartaa Shaxo
+    soo dir Shaxda aad Rabto Inaad iibsato
+    oo hel Qiimah uu kusoo siiyay admin
+    oo u qaado shaxdaada si automatic 🤖 ah
+    iyada oo aan lahayn wax fee ah
+    nagu xirnow mar walba oo naha hel waxa ad rabto
+    groupkeenana waakan Join 👇
+    https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t""", reply_markup=main_menu())
 
 # ======================
 # IIBSO
