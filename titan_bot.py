@@ -230,7 +230,7 @@ def handle_photo(message):
 
         bot.send_message(
             message.chat.id,
-            f"💰 Qiimaha: ${base}\n💵 Fee: ${fee}\n\n📊 Total: ${total}\n\nKu dir:\n{PAY_NUMBERS}",
+            f"💰 Qiimaha: ${base}\n💵 Fee: ${fee}\n\n📊 Total: {total}\n\nKu dir:\n{PAY_NUMBERS}",
             reply_markup=paid_button()
         )
 
