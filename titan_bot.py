@@ -27,6 +27,28 @@ db = client["titan_bot"]
 def get_hash(file_bytes):
     return hashlib.md5(file_bytes).hexdigest()
 
+# ===== FEE SYSTEM =====
+def get_fee():
+    data = db.settings.find_one({"name": "fee"})
+    return data["status"] if data else False
+
+def set_fee(status):
+    db.settings.update_one(
+        {"name": "fee"},
+        {"$set": {"status": status}},
+        upsert=True
+    )
+
+def apply_fee(price):
+    try:
+        price = float(price)
+        if get_fee():
+            price += 0.5
+        return str(price)
+    except:
+        return price
+# =====================
+
 def main_menu(user_id):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     if user_id == ADMIN_ID:
@@ -39,6 +61,7 @@ def admin_menu():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add("📊 Stats", "➕ BAR SHAX")
     kb.add("🔄 SHAX TO SHAX", "🗑 DELETE SHAX")
+    kb.add("💰 FEE ON/OFF")  # 👈 NEW
     return kb
 
 def paid_button():
@@ -88,6 +111,19 @@ def start(message):
 @bot.message_handler(func=lambda m: m.text == "⚙️ ADMIN PANEL" and m.from_user.id == ADMIN_ID)
 def admin_panel(message):
     bot.send_message(message.chat.id, "Admin Panel", reply_markup=admin_menu())
+
+# ======================
+# FEE BUTTON
+# ======================
+
+@bot.message_handler(func=lambda m: m.text == "💰 FEE ON/OFF" and m.from_user.id == ADMIN_ID)
+def toggle_fee(message):
+    current = get_fee()
+    new = not current
+    set_fee(new)
+
+    status = "ON (+0.5)" if new else "OFF"
+    bot.send_message(message.chat.id, f"Fee: {status}")
 
 # ======================
 # STATS
@@ -172,9 +208,11 @@ def handle_photo(message):
     mapping = db.mappings.find_one({"input_hash": img_hash})
 
     if product:
+        price = apply_fee(product["price"])  # 👈 FEE APPLIED
+
         bot.send_message(
             message.chat.id,
-            f"💰 Qiimaha: {product['price']}\n\nKu dir:\n{PAY_NUMBERS}",
+            f"💰 Qiimaha: {price}\n\nKu dir:\n{PAY_NUMBERS}",
             reply_markup=paid_button()
         )
 
@@ -196,7 +234,6 @@ def handle_photo(message):
 @bot.message_handler(func=lambda m: m.from_user.id == ADMIN_ID)
 def handle_admin_text(message):
 
-    # save price
     if admin_state.get("step") == "add_price":
         db.products.insert_one({
             "hash": admin_state["hash"],
@@ -205,7 +242,6 @@ def handle_admin_text(message):
         bot.send_message(message.chat.id, "✅ Waa la keydiyay")
         admin_state.clear()
 
-    # save mapping
     elif admin_state.get("step") == "map_text":
         db.mappings.insert_one({
             "input_hash": admin_state["input_hash"],
