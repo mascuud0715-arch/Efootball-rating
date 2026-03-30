@@ -39,14 +39,14 @@ def set_fee(status):
         upsert=True
     )
 
-def apply_fee(price):
+def calculate_price(price):
     try:
-        price = float(price)
-        if get_fee():
-            price += 0.5
-        return str(price)
+        base = float(price)
+        fee = 0.5 if get_fee() else 0
+        total = base + fee
+        return base, fee, total
     except:
-        return price
+        return price, 0, price
 # =====================
 
 def main_menu(user_id):
@@ -61,7 +61,8 @@ def admin_menu():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add("📊 Stats", "➕ BAR SHAX")
     kb.add("🔄 SHAX TO SHAX", "🗑 DELETE SHAX")
-    kb.add("💰 FEE ON/OFF")  # 👈 NEW
+    kb.add("🗑 DELETE MAPPING")
+    kb.add("💰 FEE ON/OFF")
     return kb
 
 def paid_button():
@@ -94,15 +95,7 @@ def start(message):
         {"$set": {"id": message.from_user.id}},
         upsert=True
     )
-    bot.send_message(message.chat.id, """Ku soo dhawoow Titan Market Bot 
-    HalKaan waxaad Ka heli kartaa Shaxo
-    soo dir Shaxda aad Rabto Inaad iibsato
-    oo hel Qiimah uu kusoo siiyay admin
-    oo u qaado shaxdaada si automatic 🤖 ah
-    iyada oo aan lahayn wax fee ah
-    nagu xirnow mar walba oo naha hel waxa ad rabto
-    groupkeenana waakan Join 👇
-    https://chat.whatsapp.com/Ka7EPQNrU6oG844VjiHek9?mode=gi_t""", reply_markup=main_menu(message.from_user.id))
+    bot.send_message(message.chat.id, "Ku soo dhawoow Titan Market Bot 🤝", reply_markup=main_menu(message.from_user.id))
 
 # ======================
 # ADMIN PANEL
@@ -121,9 +114,7 @@ def toggle_fee(message):
     current = get_fee()
     new = not current
     set_fee(new)
-
-    status = "ON (+0.5)" if new else "OFF"
-    bot.send_message(message.chat.id, f"Fee: {status}")
+    bot.send_message(message.chat.id, f"Fee: {'ON (+0.5)' if new else 'OFF'}")
 
 # ======================
 # STATS
@@ -131,20 +122,19 @@ def toggle_fee(message):
 
 @bot.message_handler(func=lambda m: m.text == "📊 Stats" and m.from_user.id == ADMIN_ID)
 def stats(message):
-    users = db.users.count_documents({})
-    products = db.products.count_documents({})
-    mappings = db.mappings.count_documents({})
-
-    bot.send_message(message.chat.id, f"👥 Users: {users}\n📦 Shaxyo: {products}\n🔄 Mappings: {mappings}")
+    bot.send_message(
+        message.chat.id,
+        f"Users: {db.users.count_documents({})}\nProducts: {db.products.count_documents({})}\nMappings: {db.mappings.count_documents({})}"
+    )
 
 # ======================
-# BAR SHAX (NORMAL)
+# BAR SHAX
 # ======================
 
 @bot.message_handler(func=lambda m: m.text == "➕ BAR SHAX" and m.from_user.id == ADMIN_ID)
 def bar_shax(message):
     admin_state["step"] = "add_photo"
-    bot.send_message(message.chat.id, "📸 Soo dir sawirka shaxda")
+    bot.send_message(message.chat.id, "📸 Soo dir sawirka")
 
 # ======================
 # SHAX TO SHAX
@@ -153,7 +143,7 @@ def bar_shax(message):
 @bot.message_handler(func=lambda m: m.text == "🔄 SHAX TO SHAX" and m.from_user.id == ADMIN_ID)
 def shax_to_shax(message):
     admin_state["step"] = "map_input"
-    bot.send_message(message.chat.id, "📸 Soo dir sawirka INPUT (shax 1aad)")
+    bot.send_message(message.chat.id, "📸 Soo dir INPUT")
 
 # ======================
 # DELETE SHAX
@@ -162,7 +152,16 @@ def shax_to_shax(message):
 @bot.message_handler(func=lambda m: m.text == "🗑 DELETE SHAX" and m.from_user.id == ADMIN_ID)
 def delete_shax(message):
     admin_state["step"] = "delete"
-    bot.send_message(message.chat.id, "📸 Soo dir sawirka shaxda aad tirtirayso")
+    bot.send_message(message.chat.id, "📸 Soo dir shaxda")
+
+# ======================
+# DELETE MAPPING
+# ======================
+
+@bot.message_handler(func=lambda m: m.text == "🗑 DELETE MAPPING" and m.from_user.id == ADMIN_ID)
+def delete_mapping(message):
+    admin_state["step"] = "delete_map"
+    bot.send_message(message.chat.id, "📸 Soo dir INPUT shax aad rabto tirtir")
 
 # ======================
 # HANDLE PHOTO
@@ -175,26 +174,32 @@ def handle_photo(message):
     file = bot.download_file(file_info.file_path)
     img_hash = get_hash(file)
 
-    # ===== ADD SHAX =====
+    # ADD
     if message.from_user.id == ADMIN_ID and admin_state.get("step") == "add_photo":
         admin_state["hash"] = img_hash
         admin_state["step"] = "add_price"
         bot.send_message(message.chat.id, "💰 Gali qiimaha")
         return
 
-    # ===== DELETE =====
+    # DELETE PRODUCT
     if message.from_user.id == ADMIN_ID and admin_state.get("step") == "delete":
         db.products.delete_one({"hash": img_hash})
-        db.mappings.delete_one({"input_hash": img_hash})
-        bot.send_message(message.chat.id, "🗑 Waa la tirtiray")
+        bot.send_message(message.chat.id, "🗑 Product deleted")
         admin_state.clear()
         return
 
-    # ===== SHAX TO SHAX =====
+    # DELETE MAPPING
+    if message.from_user.id == ADMIN_ID and admin_state.get("step") == "delete_map":
+        db.mappings.delete_one({"input_hash": img_hash})
+        bot.send_message(message.chat.id, "🗑 Mapping deleted")
+        admin_state.clear()
+        return
+
+    # MAPPING
     if message.from_user.id == ADMIN_ID and admin_state.get("step") == "map_input":
         admin_state["input_hash"] = img_hash
         admin_state["step"] = "map_output"
-        bot.send_message(message.chat.id, "📸 Soo dir sawirka OUTPUT")
+        bot.send_message(message.chat.id, "📸 Soo dir OUTPUT")
         return
 
     if message.from_user.id == ADMIN_ID and admin_state.get("step") == "map_output":
@@ -203,43 +208,36 @@ def handle_photo(message):
         bot.send_message(message.chat.id, "✍️ Gali qoraalka")
         return
 
-    # ===== USER =====
+    # USER
     product = db.products.find_one({"hash": img_hash})
     mapping = db.mappings.find_one({"input_hash": img_hash})
 
     if product:
-        price = apply_fee(product["price"])  # 👈 FEE APPLIED
+        base, fee, total = calculate_price(product["price"])
 
         bot.send_message(
             message.chat.id,
-            f"💰 Qiimaha: {price}\n\nKu dir:\n{PAY_NUMBERS}",
+            f"💰 Qiimaha: ${base}\n💵 Fee: ${fee}\n\n📊 Total: ${total}\n\nKu dir:\n{PAY_NUMBERS}",
             reply_markup=paid_button()
         )
 
     elif mapping:
-        bot.send_photo(
-            message.chat.id,
-            mapping["output_file_id"],
-            caption=mapping["text"]
-        )
+        bot.send_photo(message.chat.id, mapping["output_file_id"], caption=mapping["text"])
 
     else:
-        bot.send_message(message.chat.id, "⏳ Lama hayo, admin ayaa hubinaya")
+        bot.send_message(message.chat.id, "⏳ Lama hayo")
         bot.send_photo(ADMIN_ID, message.photo[-1].file_id)
 
 # ======================
-# SAVE TEXT / PRICE
+# SAVE
 # ======================
 
 @bot.message_handler(func=lambda m: m.from_user.id == ADMIN_ID)
 def handle_admin_text(message):
 
     if admin_state.get("step") == "add_price":
-        db.products.insert_one({
-            "hash": admin_state["hash"],
-            "price": message.text
-        })
-        bot.send_message(message.chat.id, "✅ Waa la keydiyay")
+        db.products.insert_one({"hash": admin_state["hash"], "price": message.text})
+        bot.send_message(message.chat.id, "Saved")
         admin_state.clear()
 
     elif admin_state.get("step") == "map_text":
@@ -248,7 +246,7 @@ def handle_admin_text(message):
             "output_file_id": admin_state["output_file_id"],
             "text": message.text
         })
-        bot.send_message(message.chat.id, "✅ Mapping waa la keydiyay")
+        bot.send_message(message.chat.id, "Mapping saved")
         admin_state.clear()
 
 # ======================
@@ -257,24 +255,16 @@ def handle_admin_text(message):
 
 @bot.callback_query_handler(func=lambda call: call.data == "paid")
 def paid(call):
-    user_id = call.from_user.id
-    bot.send_message(user_id, "⏳ SUG 5 MIN")
-
-    bot.send_message(
-        ADMIN_ID,
-        f"User {user_id} paid",
-        reply_markup=confirm_buttons(user_id)
-    )
+    bot.send_message(call.from_user.id, "⏳ SUG 5 MIN")
+    bot.send_message(ADMIN_ID, f"User {call.from_user.id} paid", reply_markup=confirm_buttons(call.from_user.id))
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("ok_"))
 def confirm(call):
-    user_id = int(call.data.split("_")[1])
-    bot.send_message(user_id, "✅ WAA LA XAQIIJIYAY")
+    bot.send_message(int(call.data.split("_")[1]), "✅ WAA LA XAQIIJIYAY")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("no_"))
 def reject(call):
-    user_id = int(call.data.split("_")[1])
-    bot.send_message(user_id, "❌ WAA LA DIIDAY")
+    bot.send_message(int(call.data.split("_")[1]), "❌ WAA LA DIIDAY")
 
 # ======================
 # RUN
